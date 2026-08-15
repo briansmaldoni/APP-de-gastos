@@ -11,19 +11,17 @@
   <title>Presupuesto Inteligente</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* VARIABLES DINÁMICAS DE TEMA */
     :root {
       --c-primary: #10b981; 
       --c-bolsa: #a855f7;    
-      --c-hb: #3b82f6;        
-      --c-bg: #0f172a;        
+      --c-hb: #3b82f6;       
+      --c-bg: #0f172a;       
       --c-panel: #1e293bb3;  
     }
 
     body { background-color: var(--c-bg); color: #f8fafc; font-family: system-ui, sans-serif; transition: background-color 0.4s ease; }
     .glass { background: var(--c-panel); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); transition: background 0.4s ease, border-color 0.4s ease; }
     
-    /* Mapeo de Colores Semánticos */
     .t-primary { color: var(--c-primary); transition: color 0.4s; }
     .bg-primary { background-color: var(--c-primary); transition: background-color 0.4s; }
     .bg-primary-hover:hover { filter: brightness(1.15); }
@@ -43,7 +41,6 @@
     .input-focus:focus { border-color: var(--c-primary); outline: none; }
     .input-focus-hb:focus { border-color: var(--c-hb); outline: none; }
 
-    /* MOTOR DE TEMA CLARO */
     body.theme-light { color: #0f172a; }
     .theme-light .text-white { color: #020617 !important; }
     .theme-light .text-slate-100 { color: #0f172a !important; }
@@ -65,18 +62,13 @@
     .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .dark .custom-scroll::-webkit-scrollbar-thumb { background: #334155; }
     
-    /* ANIMACIONES DE SINCRONIZACIÓN */
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .syncing-spin { animation: spin 1s linear infinite; }
-
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); transform: scale(1); }
-      50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8); transform: scale(1.03); }
-    }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); transform: scale(1); } 50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8); transform: scale(1.03); } }
     .sync-glow { animation: pulse-glow 1.4s ease-in-out infinite; }
   </style>
 </head>
-<body id="app-body" class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-start dark">
+<body id="app-body" class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-start dark relative">
 
   <!-- Encabezado y Opciones -->
   <div class="flex justify-between items-center mb-4 relative">
@@ -86,7 +78,6 @@
       <button onclick="openConfigModal()" class="px-2 py-1.5 text-sm rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-all shadow" title="Configuración">⚙️</button>
     </div>
 
-    <!-- Indicador y Botón de Sincronización -->
     <div class="flex items-center gap-2 overflow-visible">
       <button id="btn-top-sync" onclick="manualSync()" class="px-3 py-1.5 text-xs font-bold rounded-full bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition-all shadow flex items-center gap-1.5 shrink-0">
         <span class="sync-icon">🔄</span> Actualizar
@@ -103,11 +94,13 @@
   <!-- Dashboard Central -->
   <div class="grid grid-cols-2 gap-3 mb-4">
     <div class="glass p-4 rounded-xl col-span-2 text-center border-l-4 border-primary bg-primary-light relative overflow-hidden shadow-lg flex flex-col items-center justify-center">
-      <span class="text-xs t-primary block uppercase tracking-wider font-bold mb-1">Presupuesto para Hoy</span>
+      <div class="flex justify-between w-full items-start px-1 mb-1">
+         <span class="text-xs t-primary uppercase tracking-wider font-bold">Presupuesto para Hoy</span>
+         <button onclick="enviarSaldoHoyABolsa()" class="bg-bolsa hover:brightness-110 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1 transition-all" title="Mandar lo que sobró hoy a la Bolsa">
+            <span class="text-[10px]">📥</span> A Bolsa
+         </button>
+      </div>
       <span id="display-today" class="text-4xl font-black t-primary">$ 0,00</span>
-      <button id="btn-enviar-bolsa" onclick="enviarSaldoHoyABolsa()" class="mt-2.5 text-[11px] font-bold py-1 px-3 rounded-full bg-purple-900/40 border border-purple-500/50 t-bolsa hover:bg-purple-800/60 transition-all flex items-center gap-1 shadow-sm">
-        💰 Guardar resto de hoy en Bolsa
-      </button>
     </div>
     
     <div class="glass p-3 rounded-xl border-l-2 border-bolsa text-center flex flex-col justify-center shadow-md">
@@ -217,11 +210,27 @@
   <div class="mt-6 pb-10">
     <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">📃 Últimos Movimientos</h3>
-      <button onclick="manualSync()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 flex items-center gap-1 transition-all">
-        <span class="sync-icon">🔄</span> Actualizar
-      </button>
     </div>
     <div id="bottom-movimientos" class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scroll"></div>
+  </div>
+
+  <!-- MODAL CAMBIO DE DÍA (DECISIÓN SOBRANTE) -->
+  <div id="modal-rollover" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[80] flex items-center justify-center p-4">
+    <div class="glass w-full max-w-sm rounded-2xl border border-purple-500/50 p-5 flex flex-col text-center shadow-2xl">
+      <span class="text-3xl mb-2">🌅</span>
+      <h2 class="text-base font-bold text-white mb-1">¡Nuevo Día Detectado!</h2>
+      <p class="text-xs text-slate-300 mb-3">Ayer te sobraron <strong id="rollover-amount" class="t-bolsa font-black text-sm">$ 0,00</strong> de tu presupuesto.</p>
+      <p class="text-[11px] text-slate-400 mb-5">¿Qué te gustaría hacer con ese dinero sobrante?</p>
+
+      <div class="space-y-2">
+        <button onclick="confirmRollover(true)" class="w-full bg-bolsa hover:brightness-110 text-white font-bold text-xs py-3 rounded-xl shadow-lg border border-purple-400/30">
+          📥 Guardar sobrante en la Bolsa (Ahorro)
+        </button>
+        <button onclick="confirmRollover(false)" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs py-3 rounded-xl border border-slate-700">
+          🔄 Repartir entre los días que quedan
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL DE CONFIGURACIÓN Y TEMAS -->
@@ -237,7 +246,6 @@
         <button onclick="switchCfgTab('cfg-tema')" id="btn-cfg-tema" class="flex-1 py-2 text-slate-500 transition-all">Estilo Visual</button>
       </div>
 
-      <!-- Panel Fecha -->
       <div id="cfg-fecha" class="space-y-4">
         <label class="flex items-start gap-2 text-sm text-slate-300">
           <input type="checkbox" id="cfg-auto-date" onchange="toggleAutoDate()" class="w-4 h-4 mt-1 accent-blue-500">
@@ -252,7 +260,6 @@
         </div>
       </div>
 
-      <!-- Panel Tema -->
       <div id="cfg-tema" class="hidden space-y-3">
         <div>
           <label class="text-xs text-slate-400 block mb-1">Elegir un Tema (<span id="user-theme-label" class="text-blue-400 font-bold">Brian</span>):</label>
@@ -313,13 +320,12 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbxqMkqNgYqcdliQkmz4foC-g6RvI9OGOw-Kai3fnltL-A9dpZC4frGYDsX7TIMxzW0R/exec"; 
     
     let currentUser = "Brian";
-    let state = { hb: 0, bs: 0, movements: [], config: { paydate: "", themeBrian: "", themeVirginia: "" } };
+    let state = { hb: 0, bs: 0, movements: [], config: { paydate: "", themeBrian: "", themeVirginia: "", lastProcessedDate: "" } };
     let feriadosOficiales = ["2026-01-01", "2026-03-24", "2026-04-02", "2026-05-01", "2026-05-25", "2026-06-20", "2026-07-09", "2026-08-17", "2026-10-12", "2026-11-20", "2026-12-25"];
     let lastFetchTime = 0;
+    let pendingRolloverAmount = 0;
+    let pendingRolloverDate = "";
 
-    // ----------------------------------------------------
-    // FUNCIÓN DE CACHÉ LOCAL VISUAL
-    // ----------------------------------------------------
     function guardarEnCache() {
       let cacheData = { user: currentUser, config: state.config };
       localStorage.setItem('cfg_fast_cache', JSON.stringify(cacheData));
@@ -329,7 +335,7 @@
       const cacheStr = localStorage.getItem('cfg_fast_cache');
       if (cacheStr) {
          let cache = JSON.parse(cacheStr);
-         state.config = cache.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+         state.config = cache.config || { paydate: "", themeBrian: "", themeVirginia: "", lastProcessedDate: "" };
          setUser(cache.user || 'Brian');
       } else {
          const savedUser = localStorage.getItem('cfg_user');
@@ -429,8 +435,7 @@
     ];
 
     function populateThemeSelect() {
-      const select = document.getElementById('cfg-preset');
-      select.innerHTML = "";
+      const select = document.getElementById('cfg-preset'); select.innerHTML = "";
       THEME_GROUPS.forEach(group => {
         let optgroup = document.createElement('optgroup'); optgroup.label = group.label;
         group.options.forEach(opt => {
@@ -444,10 +449,7 @@
     }
 
     function getThemeValues(id) {
-      for(let g of THEME_GROUPS) {
-        let found = g.options.find(o => o.id === id); if(found) return found.vals;
-      }
-      return null;
+      for(let g of THEME_GROUPS) { let found = g.options.find(o => o.id === id); if(found) return found.vals; } return null;
     }
 
     function formatMoney(amount) {
@@ -489,27 +491,12 @@
     }
 
     async function init() {
-      populateThemeSelect();
-      cargarDesdeCache();
-      
+      populateThemeSelect(); cargarDesdeCache();
       const todayStr = toLocalISODate(new Date());
       document.getElementById('u-fecha').value = todayStr; document.getElementById('d-fecha').value = todayStr; document.getElementById('a-fecha').value = todayStr;
       setupEnterNavigation(); 
       await cargarFeriadosAPI(); 
       fetchData(true); 
-
-      // DETECTOR DE REAPERTURA / ENFOQUE DE LA APP
-      const autoRefreshOnFocus = () => {
-        const now = Date.now();
-        if (now - lastFetchTime > 4000) { // Evita peticiones repetidas si son <4s
-          fetchData(true);
-        }
-      };
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') autoRefreshOnFocus();
-      });
-      window.addEventListener('focus', autoRefreshOnFocus);
     }
 
     function setUser(user) {
@@ -533,7 +520,6 @@
       guardarEnCache();
     }
 
-    // --- LOGICA DE CONFIGURACIÓN Y TEMAS ---
     function openConfigModal() {
       document.getElementById('modal-config').classList.remove('hidden');
       const isAuto = !state.config.paydate;
@@ -554,10 +540,7 @@
       }
     }
     
-    function closeConfigModal() { 
-       document.getElementById('modal-config').classList.add('hidden'); 
-       applySavedConfig(); 
-    }
+    function closeConfigModal() { document.getElementById('modal-config').classList.add('hidden'); applySavedConfig(); }
     
     function switchCfgTab(tabId) {
       document.getElementById('cfg-fecha').classList.add('hidden'); document.getElementById('cfg-tema').classList.add('hidden'); document.getElementById(tabId).classList.remove('hidden');
@@ -609,9 +592,12 @@
       syncBackend({ action: "updateConfig", user: currentUser, paydate: paydate, theme: themeJson });
       document.getElementById('modal-config').classList.add('hidden'); render();
     }
-    // ---------------------------------------
 
-    function manualSync() { fetchData(true); }
+    function manualSync() { 
+      document.getElementById('btn-top-sync').classList.add('hidden');
+      document.getElementById('sync-status').classList.remove('hidden');
+      fetchData(true); 
+    }
 
     function switchTab(tabId) {
       document.querySelectorAll('.nav-form').forEach(f => f.classList.add('hidden')); document.getElementById(tabId).classList.remove('hidden');
@@ -639,34 +625,88 @@
     function clearForm(formId) { document.getElementById(formId).reset(); document.getElementById('u-fecha').value = toLocalISODate(new Date()); document.getElementById('d-fecha').value = toLocalISODate(new Date()); document.getElementById('u-fecha').disabled = false; toggleAjusteFields(); }
     function setupEnterNavigation() { document.querySelectorAll('form').forEach(form => { const inputs = Array.from(form.querySelectorAll('input, select, button[type="submit"]')); inputs.forEach((input, index) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (index < inputs.length - 1) inputs[index + 1].focus(); } }); }); }); }
 
+    // --- LÓGICA AUTOMÁTICA DE CAMBIO DE DÍA (ROLLOVER) ---
+    function checkDayRollover() {
+      const todayStr = toLocalISODate(new Date());
+      const lastProcessed = state.config.lastProcessedDate;
+
+      // Si es la primera vez que abre o ya fue procesado hoy, no hace nada
+      if (!lastProcessed) {
+         syncBackend({ action: "updateConfig", user: currentUser, lastProcessedDate: todayStr });
+         state.config.lastProcessedDate = todayStr;
+         return;
+      }
+
+      if (todayStr > lastProcessed) {
+         // Calcular sobrante del día anterior
+         const { baseDailyBudget, gastosPorDia } = calculateBudgets();
+         const unspentPreviousDay = baseDailyBudget - (gastosPorDia[lastProcessed] || 0);
+
+         if (unspentPreviousDay > 0) {
+            pendingRolloverAmount = unspentPreviousDay;
+            pendingRolloverDate = lastProcessed;
+            document.getElementById('rollover-amount').innerText = formatMoney(unspentPreviousDay);
+            document.getElementById('modal-rollover').classList.remove('hidden');
+         } else {
+            // Si no sobró nada, actualiza la fecha procesada directamente
+            state.config.lastProcessedDate = todayStr;
+            syncBackend({ action: "updateConfig", user: currentUser, lastProcessedDate: todayStr });
+         }
+      }
+    }
+
+    function confirmRollover(moveToBolsa) {
+      const todayStr = toLocalISODate(new Date());
+      document.getElementById('modal-rollover').classList.add('hidden');
+
+      if (moveToBolsa && pendingRolloverAmount > 0) {
+         state.bs += pendingRolloverAmount;
+         let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
+         
+         let newMovement = { 
+           action: "addMovement", id: idUnico, user: currentUser, type: "Ajuste T-5", 
+           amount: pendingRolloverAmount, concept: `Sobrante del ${pendingRolloverDate} a Bolsa`, 
+           target: "Bolsa", dates: [pendingRolloverDate], newHB: state.hb, newBS: state.bs,
+           lastProcessedDate: todayStr
+         };
+
+         state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Ajuste T-5", monto: pendingRolloverAmount, concepto: `Sobrante del ${pendingRolloverDate} a Bolsa`, target: "Bolsa", fechas_afectadas: JSON.stringify([pendingRolloverDate]) });
+         state.config.lastProcessedDate = todayStr;
+         syncBackend(newMovement);
+      } else {
+         // Repartir en el mes (No mueve a bolsa, solo registra el día procesado)
+         state.config.lastProcessedDate = todayStr;
+         syncBackend({ action: "updateConfig", user: currentUser, lastProcessedDate: todayStr });
+      }
+      render();
+    }
+
     async function fetchData(showVisuals = true) {
-      lastFetchTime = Date.now();
       if(showVisuals) {
-        document.getElementById('sync-status').classList.remove('hidden');
-        document.getElementById('btn-top-sync').classList.add('hidden');
+         document.getElementById('btn-top-sync').classList.add('hidden');
+         document.getElementById('sync-status').classList.remove('hidden');
       }
       try {
         const cacheBuster = "?t=" + new Date().getTime();
         const res = await fetch(API_URL + cacheBuster); const data = await res.json();
         state.hb = parseFloat(data.hb) || 0; state.bs = parseFloat(data.bs) || 0;
-        state.movements = data.movements || []; state.config = data.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+        state.movements = data.movements || []; 
+        state.config = data.config || { paydate: "", themeBrian: "", themeVirginia: "", lastProcessedDate: "" };
+        
         applySavedConfig(); guardarEnCache(); render();
+        checkDayRollover(); // Verifica cambio de día
       } catch (e) { console.error("Error", e); }
       finally { 
         document.getElementById('sync-status').classList.add('hidden'); 
-        document.getElementById('btn-top-sync').classList.remove('hidden');
+        document.getElementById('btn-top-sync').classList.remove('hidden'); 
       }
     }
 
     async function syncBackend(payload) {
-      document.getElementById('sync-status').classList.remove('hidden');
       document.getElementById('btn-top-sync').classList.add('hidden');
-      try { await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); setTimeout(() => fetchData(false), 1500); } 
-      catch (e) { 
-        console.error("Error", e); 
-        document.getElementById('sync-status').classList.add('hidden'); 
-        document.getElementById('btn-top-sync').classList.remove('hidden');
-      }
+      document.getElementById('sync-status').classList.remove('hidden');
+      try { await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); setTimeout(() => fetchData(false), 2000); } 
+      catch (e) { console.error("Error", e); }
     }
 
     function reverseMath(m) {
@@ -727,47 +767,24 @@
     }
 
     function enviarSaldoHoyABolsa() {
-      const { baseDailyBudget, gastosPorDia } = calculateBudgets();
-      let todayStr = toLocalISODate(new Date());
-      let todayBudget = baseDailyBudget - (gastosPorDia[todayStr] || 0);
+       const { baseDailyBudget, gastosPorDia } = calculateBudgets();
+       const todayStr = toLocalISODate(new Date());
+       const sobranteHoy = baseDailyBudget - (gastosPorDia[todayStr] || 0);
 
-      if (todayBudget <= 0) {
-        alert("No tienes saldo restante disponible hoy para enviar a la Bolsa.");
-        return;
-      }
+       if (sobranteHoy <= 0) {
+          alert("¡No tenés saldo sobrante hoy para enviar a la Bolsa!");
+          return;
+       }
 
-      if (!confirm(`¿Enviar ${formatMoney(todayBudget)} a la Bolsa de Saldos?\nEste dinero quedará guardado y el presupuesto disponible de hoy pasará a $ 0,00.`)) return;
-
-      state.bs += todayBudget;
-      let idUnico = new Date().toISOString();
-      let datesArr = [todayStr];
-      let concept = "Sobrante de hoy a Bolsa";
-
-      let newMovement = { 
-        action: "addMovement", 
-        id: idUnico, 
-        user: currentUser, 
-        type: "Ajuste T-5", 
-        amount: todayBudget, 
-        concept: concept, 
-        target: "Bolsa", 
-        dates: datesArr, 
-        newHB: state.hb, 
-        newBS: state.bs 
-      };
-
-      state.movements.push({ 
-        fecha: idUnico, 
-        usuario: currentUser, 
-        tipo: "Ajuste T-5", 
-        monto: todayBudget, 
-        concepto: concept, 
-        target: "Bolsa", 
-        fechas_afectadas: JSON.stringify(datesArr) 
-      });
-
-      syncBackend(newMovement);
-      render();
+       if(confirm(`¿Querés guardar los ${formatMoney(sobranteHoy)} que te sobraron hoy directo en tu Bolsa de Saldos?`)) {
+          let amount = sobranteHoy;
+          let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
+          state.bs += amount;
+          
+          let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Ajuste T-5", amount: amount, concept: "Sobrante de hoy a Bolsa", target: "Bolsa", dates: [todayStr], newHB: state.hb, newBS: state.bs };
+          state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Ajuste T-5", monto: amount, concepto: "Sobrante de hoy a Bolsa", target: "Bolsa", fechas_afectadas: JSON.stringify([todayStr]) });
+          syncBackend(newMovement); render();
+       }
     }
 
     function render() {
