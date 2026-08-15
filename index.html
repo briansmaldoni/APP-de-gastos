@@ -11,7 +11,6 @@
   <title>Presupuesto Inteligente</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* VARIABLES DINÁMICAS DE TEMA */
     :root {
       --c-primary: #10b981; 
       --c-bolsa: #a855f7;    
@@ -23,7 +22,6 @@
     body { background-color: var(--c-bg); color: #f8fafc; font-family: system-ui, sans-serif; transition: background-color 0.4s ease; }
     .glass { background: var(--c-panel); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); transition: background 0.4s ease, border-color 0.4s ease; }
     
-    /* Mapeo de Colores Semánticos */
     .t-primary { color: var(--c-primary); transition: color 0.4s; }
     .bg-primary { background-color: var(--c-primary); transition: background-color 0.4s; }
     .bg-primary-hover:hover { filter: brightness(1.15); }
@@ -68,15 +66,13 @@
     /* ANIMACIONES DE SINCRONIZACIÓN */
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .syncing-spin { animation: spin 1s linear infinite; }
-
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); transform: scale(1); }
-      50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8); transform: scale(1.03); }
-    }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); transform: scale(1); } 50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8); transform: scale(1.03); } }
     .sync-glow { animation: pulse-glow 1.4s ease-in-out infinite; }
   </style>
 </head>
-<body id="app-body" class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-start dark">
+<body id="app-body" class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-start dark relative">
+
+  <div id="error-box" class="hidden absolute top-4 left-4 right-4 bg-red-950 text-red-300 p-3 rounded-xl text-xs font-bold text-center border border-red-500 shadow-2xl z-[100] transition-all"></div>
 
   <!-- Encabezado y Opciones -->
   <div class="flex justify-between items-center mb-4 relative">
@@ -88,19 +84,26 @@
 
     <!-- Indicador de Sincronización Destacado -->
     <div class="flex items-center gap-2 overflow-visible">
+      <button id="btn-manual-sync" onclick="manualSync()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-1 transition-all shadow">
+        <span>🔄</span> Actualizar
+      </button>
+
       <div id="sync-status" class="hidden flex items-center gap-1.5 text-xs text-amber-300 font-extrabold bg-amber-950/90 px-3 py-1.5 rounded-full border border-amber-500/80 shadow-lg whitespace-nowrap sync-glow">
         <span class="inline-block syncing-spin text-sm">⏳</span> Sincronizando...
-      </div>
-      <div class="flex flex-col items-end shrink-0">
-        <span id="active-user" class="text-[11px] font-bold text-slate-400">Usuario...</span>
       </div>
     </div>
   </div>
 
   <!-- Dashboard Central -->
   <div class="grid grid-cols-2 gap-3 mb-4">
-    <div class="glass p-4 rounded-xl col-span-2 text-center border-l-4 border-primary bg-primary-light relative overflow-hidden shadow-lg">
-      <span class="text-xs t-primary block uppercase tracking-wider font-bold mb-1">Presupuesto para Hoy</span>
+    <div class="glass p-4 rounded-xl col-span-2 text-center border-l-4 border-primary bg-primary-light relative overflow-hidden shadow-lg flex flex-col justify-center items-center">
+      <div class="flex justify-between w-full items-start px-1 mb-1">
+         <span class="text-xs t-primary uppercase tracking-wider font-bold">Presupuesto Hoy</span>
+         <!-- NUEVO BOTÓN MANUAL DE BOLSA -->
+         <button onclick="pasarSobranteABolsa()" class="bg-bolsa hover:brightness-110 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1 transition-all" title="Mandar lo que sobró hoy a la Bolsa">
+            <span class="text-[10px]">📥</span> A Bolsa
+         </button>
+      </div>
       <span id="display-today" class="text-4xl font-black t-primary">$ 0,00</span>
     </div>
     
@@ -211,14 +214,11 @@
   <div class="mt-6 pb-10">
     <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">📃 Últimos Movimientos</h3>
-      <button onclick="manualSync()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 flex items-center gap-1 transition-all">
-        <span class="sync-icon">🔄</span> Actualizar
-      </button>
     </div>
     <div id="bottom-movimientos" class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scroll"></div>
   </div>
 
-  <!-- MODAL DE CONFIGURACIÓN Y TEMAS -->
+  <!-- MODAL DE CONFIGURACIÓN Y TEMAS (55+ Opciones) -->
   <div id="modal-config" onclick="if(event.target === this) closeConfigModal()" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4">
     <div class="glass w-full max-w-sm rounded-2xl border border-slate-600 p-4 flex flex-col shadow-2xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
@@ -231,7 +231,6 @@
         <button onclick="switchCfgTab('cfg-tema')" id="btn-cfg-tema" class="flex-1 py-2 text-slate-500 transition-all">Estilo Visual</button>
       </div>
 
-      <!-- Panel Fecha -->
       <div id="cfg-fecha" class="space-y-4">
         <label class="flex items-start gap-2 text-sm text-slate-300">
           <input type="checkbox" id="cfg-auto-date" onchange="toggleAutoDate()" class="w-4 h-4 mt-1 accent-blue-500">
@@ -246,7 +245,6 @@
         </div>
       </div>
 
-      <!-- Panel Tema -->
       <div id="cfg-tema" class="hidden space-y-3">
         <div>
           <label class="text-xs text-slate-400 block mb-1">Elegir un Tema (<span id="user-theme-label" class="text-blue-400 font-bold">Brian</span>):</label>
@@ -310,8 +308,23 @@
     let state = { hb: 0, bs: 0, movements: [], config: { paydate: "", themeBrian: "", themeVirginia: "" } };
     let feriadosOficiales = ["2026-01-01", "2026-03-24", "2026-04-02", "2026-05-01", "2026-05-25", "2026-06-20", "2026-07-09", "2026-08-17", "2026-10-12", "2026-11-20", "2026-12-25"];
 
+    function displayErrorBox(msg) {
+        const box = document.getElementById('error-box');
+        box.innerText = msg; box.classList.remove('hidden');
+        setTimeout(() => box.classList.add('hidden'), 6000);
+    }
+
     // ----------------------------------------------------
-    // FUNCIÓN DE CACHÉ LOCAL VISUAL (NUEVO)
+    // DETECTOR DE REGRESO A LA APP (Auto-Sync)
+    // ----------------------------------------------------
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+         manualSync();
+      }
+    });
+
+    // ----------------------------------------------------
+    // FUNCIÓN DE CACHÉ LOCAL VISUAL
     // ----------------------------------------------------
     function guardarEnCache() {
       let cacheData = { user: currentUser, config: state.config };
@@ -329,7 +342,6 @@
          setUser(savedUser ? savedUser : 'Brian');
       }
     }
-    // ----------------------------------------------------
 
     async function cargarFeriadosAPI() {
       try {
@@ -340,96 +352,18 @@
     }
 
     const THEME_GROUPS = [
-      {
-        label: "Oscuros / Modernos",
-        options: [
-          { id: "dark-emerald", name: "💚 Esmeralda Oscuro", vals: { primary: "#10b981", bolsa: "#a855f7", hb: "#3b82f6", bg: "#0f172a", panel: "#1e293bb3", isLight: false } },
-          { id: "dark-ruby", name: "🔴 Rubí Nocturno", vals: { primary: "#f43f5e", bolsa: "#fbbf24", hb: "#818cf8", bg: "#18181b", panel: "#27272aa6", isLight: false } },
-          { id: "dark-sapphire", name: "🔵 Zafiro Profundo", vals: { primary: "#3b82f6", bolsa: "#ec4899", hb: "#14b8a6", bg: "#172554", panel: "#164e63b3", isLight: false } },
-          { id: "dark-amethyst", name: "🟣 Amatista", vals: { primary: "#c084fc", bolsa: "#2dd4bf", hb: "#f472b6", bg: "#2e1065", panel: "#3b0764b3", isLight: false } },
-          { id: "dark-amber", name: "🟠 Ámbar Quemado", vals: { primary: "#f59e0b", bolsa: "#ef4444", hb: "#6366f1", bg: "#451a03", panel: "#78350fb3", isLight: false } },
-          { id: "dark-graphite", name: "⚫ Grafito", vals: { primary: "#94a3b8", bolsa: "#64748b", hb: "#475569", bg: "#020617", panel: "#0f172ab3", isLight: false } },
-          { id: "dark-obsidian", name: "🖤 Obsidiana", vals: { primary: "#e4e4e7", bolsa: "#a1a1aa", hb: "#d4d4d8", bg: "#000000", panel: "#18181bb3", isLight: false } },
-          { id: "dark-forest", name: "🌲 Bosque Negro", vals: { primary: "#22c55e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#052e16", panel: "#14532db3", isLight: false } },
-          { id: "dark-ocean", name: "🌊 Océano Oscuro", vals: { primary: "#06b6d4", bolsa: "#f43f5e", hb: "#3b82f6", bg: "#083344", panel: "#164e63b3", isLight: false } },
-          { id: "dark-blood", name: "🩸 Sangre y Ceniza", vals: { primary: "#dc2626", bolsa: "#7f1d1d", hb: "#ef4444", bg: "#1a0505", panel: "#450a0ab3", isLight: false } }
-        ]
-      },
-      {
-        label: "Neón / Cyberpunk",
-        options: [
-          { id: "neon-synth", name: "👾 Synthwave", vals: { primary: "#f0abfc", bolsa: "#2dd4bf", hb: "#fde047", bg: "#2c1030", panel: "#4a1c40b3", isLight: false } },
-          { id: "neon-cyber", name: "🦾 Cyberpunk", vals: { primary: "#fde047", bolsa: "#f43f5e", hb: "#06b6d4", bg: "#09090b", panel: "#18181bb3", isLight: false } },
-          { id: "neon-matrix", name: "🖥️ Matrix", vals: { primary: "#4ade80", bolsa: "#22c55e", hb: "#16a34a", bg: "#000000", panel: "#022c22b3", isLight: false } },
-          { id: "neon-tokyo", name: "🌃 Tokyo Night", vals: { primary: "#fb7185", bolsa: "#38bdf8", hb: "#c084fc", bg: "#111827", panel: "#1e293bb3", isLight: false } },
-          { id: "neon-miami", name: "🦩 Miami Vice", vals: { primary: "#f472b6", bolsa: "#2dd4bf", hb: "#fde047", bg: "#1e1b4b", panel: "#312e81b3", isLight: false } },
-          { id: "neon-laser", name: "🔦 Láser", vals: { primary: "#e879f9", bolsa: "#34d399", hb: "#f87171", bg: "#171717", panel: "#262626b3", isLight: false } },
-          { id: "neon-acid", name: "🧪 Ácido", vals: { primary: "#a3e635", bolsa: "#eab308", hb: "#22d3ee", bg: "#0f172a", panel: "#1e293bb3", isLight: false } },
-          { id: "neon-purple", name: "🔮 Ultra Púrpura", vals: { primary: "#d946ef", bolsa: "#a855f7", hb: "#8b5cf6", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } },
-          { id: "neon-blue", name: "⚡ Electric Blue", vals: { primary: "#3b82f6", bolsa: "#60a5fa", hb: "#93c5fd", bg: "#020617", panel: "#0f172ab3", isLight: false } },
-          { id: "neon-sunset", name: "🌇 Neón Sunset", vals: { primary: "#fb923c", bolsa: "#f43f5e", hb: "#c084fc", bg: "#2e0219", panel: "#4c0519b3", isLight: false } }
-        ]
-      },
-      {
-        label: "Claros / Minimalistas",
-        options: [
-          { id: "light-arctic", name: "❄️ Ártico Puro", vals: { primary: "#0ea5e9", bolsa: "#8b5cf6", hb: "#14b8a6", bg: "#f8fafc", panel: "#ffffffcc", isLight: true } },
-          { id: "light-ivory", name: "🦴 Marfil", vals: { primary: "#d97706", bolsa: "#be123c", hb: "#4338ca", bg: "#fdfbf7", panel: "#fefdfbcc", isLight: true } },
-          { id: "light-cotton", name: "☁️ Algodón", vals: { primary: "#10b981", bolsa: "#ec4899", hb: "#3b82f6", bg: "#f1f5f9", panel: "#ffffffb3", isLight: true } },
-          { id: "light-vanilla", name: "🍦 Vainilla", vals: { primary: "#f59e0b", bolsa: "#db2777", hb: "#0284c7", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } },
-          { id: "light-paper", name: "📄 Papel", vals: { primary: "#334155", bolsa: "#64748b", hb: "#475569", bg: "#fdfcfc", panel: "#ffffffb3", isLight: true } },
-          { id: "light-silver", name: "🥄 Plata", vals: { primary: "#64748b", bolsa: "#475569", hb: "#334155", bg: "#e2e8f0", panel: "#f8fafcb3", isLight: true } },
-          { id: "light-rose", name: "🌸 Rosa Pálido", vals: { primary: "#e11d48", bolsa: "#4f46e5", hb: "#059669", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } },
-          { id: "light-sky", name: "🌤️ Cielo Claro", vals: { primary: "#0284c7", bolsa: "#7c3aed", hb: "#ea580c", bg: "#f0f9ff", panel: "#e0f2fecc", isLight: true } },
-          { id: "light-mint", name: "🍃 Menta Claro", vals: { primary: "#059669", bolsa: "#2563eb", hb: "#d97706", bg: "#f0fdf4", panel: "#d1fae5cc", isLight: true } },
-          { id: "light-lemon", name: "🍋 Limón Suave", vals: { primary: "#d97706", bolsa: "#059669", hb: "#4f46e5", bg: "#fefce8", panel: "#fef9c3cc", isLight: true } }
-        ]
-      },
-      {
-        label: "Pasteles Suaves",
-        options: [
-          { id: "pastel-peach", name: "🍑 Durazno", vals: { primary: "#f97316", bolsa: "#db2777", hb: "#0284c7", bg: "#ffedd5", panel: "#fef08acc", isLight: true } },
-          { id: "pastel-lavender", name: "🪻 Lavanda", vals: { primary: "#9333ea", bolsa: "#0284c7", hb: "#ea580c", bg: "#faf5ff", panel: "#f3e8ffcc", isLight: true } },
-          { id: "pastel-babyblue", name: "🍼 Celeste Bebé", vals: { primary: "#3b82f6", bolsa: "#f43f5e", hb: "#10b981", bg: "#eff6ff", panel: "#dbeafecc", isLight: true } },
-          { id: "pastel-pistachio", name: "🥜 Pistacho", vals: { primary: "#65a30d", bolsa: "#0284c7", hb: "#8b5cf6", bg: "#f7fee7", panel: "#dcfce7cc", isLight: true } },
-          { id: "pastel-pink", name: "🎀 Rosa Pastel", vals: { primary: "#ec4899", bolsa: "#8b5cf6", hb: "#06b6d4", bg: "#fdf2f8", panel: "#fce7f3cc", isLight: true } },
-          { id: "pastel-butter", name: "🧈 Manteca", vals: { primary: "#eab308", bolsa: "#ec4899", hb: "#14b8a6", bg: "#fefce8", panel: "#fef08acc", isLight: true } },
-          { id: "pastel-lilac", name: "💐 Lila", vals: { primary: "#d946ef", bolsa: "#0ea5e9", hb: "#f59e0b", bg: "#fdf4ff", panel: "#fae8ffcc", isLight: true } },
-          { id: "pastel-mint", name: "🌿 Menta Pastel", vals: { primary: "#14b8a6", bolsa: "#a855f7", hb: "#f43f5e", bg: "#f0fdfa", panel: "#ccfbf1cc", isLight: true } },
-          { id: "pastel-sand", name: "🏖️ Arena", vals: { primary: "#b45309", bolsa: "#1d4ed8", hb: "#047857", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } },
-          { id: "pastel-coral", name: "🐠 Coral Pastel", vals: { primary: "#f43f5e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } }
-        ]
-      },
-      {
-        label: "Estéticas / Vibes",
-        options: [
-          { id: "vibe-coffee", name: "☕ Café Latte", vals: { primary: "#b45309", bolsa: "#14b8a6", hb: "#6366f1", bg: "#292524", panel: "#44403cb3", isLight: false } },
-          { id: "vibe-matcha", name: "🍵 Matcha", vals: { primary: "#4d7c0f", bolsa: "#0369a1", hb: "#b45309", bg: "#f7fee7", panel: "#ecfccbcc", isLight: true } },
-          { id: "vibe-grape", name: "🍇 Uva", vals: { primary: "#7e22ce", bolsa: "#be123c", hb: "#15803d", bg: "#3b0764", panel: "#581c87b3", isLight: false } },
-          { id: "vibe-berry", name: "🍓 Frutos Rojos", vals: { primary: "#be123c", bolsa: "#6d28d9", hb: "#b45309", bg: "#2e0219", panel: "#4c0519b3", isLight: false } },
-          { id: "vibe-autumn", name: "🍂 Otoño", vals: { primary: "#ea580c", bolsa: "#b91c1c", hb: "#a16207", bg: "#451a03", panel: "#78350fb3", isLight: false } },
-          { id: "vibe-desert", name: "🐪 Desierto", vals: { primary: "#d97706", bolsa: "#c2410c", hb: "#b45309", bg: "#78350f", panel: "#92400eb3", isLight: false } },
-          { id: "vibe-galaxy", name: "🌌 Galaxia", vals: { primary: "#c084fc", bolsa: "#38bdf8", hb: "#f472b6", bg: "#0f172a", panel: "#1e1b4bb3", isLight: false } },
-          { id: "vibe-aurora", name: "🌠 Aurora Boreal", vals: { primary: "#34d399", bolsa: "#818cf8", hb: "#a78bfa", bg: "#064e3b", panel: "#065f46b3", isLight: false } },
-          { id: "vibe-twilight", name: "🌆 Crepúsculo", vals: { primary: "#f472b6", bolsa: "#818cf8", hb: "#fb923c", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } },
-          { id: "vibe-candy", name: "🍬 Caramelo", vals: { primary: "#f43f5e", bolsa: "#0ea5e9", hb: "#eab308", bg: "#fdf2f8", panel: "#fbcfe8cc", isLight: true } },
-          { id: "vibe-tangerine", name: "🍊 Mandarina", vals: { primary: "#f97316", bolsa: "#84cc16", hb: "#06b6d4", bg: "#fff7ed", panel: "#ffedd5cc", isLight: true } },
-          { id: "vibe-dracula", name: "🧛 Drácula", vals: { primary: "#ff79c6", bolsa: "#bd93f9", hb: "#50fa7b", bg: "#282a36", panel: "#44475ab3", isLight: false } },
-          { id: "vibe-monokai", name: "🦇 Monokai", vals: { primary: "#a6e22e", bolsa: "#fd971f", hb: "#66d9ef", bg: "#272822", panel: "#3e3d32b3", isLight: false } },
-          { id: "vibe-nord", name: "🧭 Nord", vals: { primary: "#a3be8c", bolsa: "#b48ead", hb: "#81a1c1", bg: "#2e3440", panel: "#3b4252b3", isLight: false } },
-          { id: "vibe-hacker", name: "💻 Hacker", vals: { primary: "#22c55e", bolsa: "#16a34a", hb: "#4ade80", bg: "#000000", panel: "#052e16b3", isLight: false } }
-        ]
-      }
+      { label: "Oscuros / Modernos", options: [ { id: "dark-emerald", name: "💚 Esmeralda Oscuro", vals: { primary: "#10b981", bolsa: "#a855f7", hb: "#3b82f6", bg: "#0f172a", panel: "#1e293bb3", isLight: false } }, { id: "dark-ruby", name: "🔴 Rubí Nocturno", vals: { primary: "#f43f5e", bolsa: "#fbbf24", hb: "#818cf8", bg: "#18181b", panel: "#27272aa6", isLight: false } }, { id: "dark-sapphire", name: "🔵 Zafiro Profundo", vals: { primary: "#3b82f6", bolsa: "#ec4899", hb: "#14b8a6", bg: "#172554", panel: "#164e63b3", isLight: false } }, { id: "dark-amethyst", name: "🟣 Amatista", vals: { primary: "#c084fc", bolsa: "#2dd4bf", hb: "#f472b6", bg: "#2e1065", panel: "#3b0764b3", isLight: false } }, { id: "dark-amber", name: "🟠 Ámbar Quemado", vals: { primary: "#f59e0b", bolsa: "#ef4444", hb: "#6366f1", bg: "#451a03", panel: "#78350fb3", isLight: false } }, { id: "dark-graphite", name: "⚫ Grafito", vals: { primary: "#94a3b8", bolsa: "#64748b", hb: "#475569", bg: "#020617", panel: "#0f172ab3", isLight: false } }, { id: "dark-obsidian", name: "🖤 Obsidiana", vals: { primary: "#e4e4e7", bolsa: "#a1a1aa", hb: "#d4d4d8", bg: "#000000", panel: "#18181bb3", isLight: false } }, { id: "dark-forest", name: "🌲 Bosque Negro", vals: { primary: "#22c55e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#052e16", panel: "#14532db3", isLight: false } }, { id: "dark-ocean", name: "🌊 Océano Oscuro", vals: { primary: "#06b6d4", bolsa: "#f43f5e", hb: "#3b82f6", bg: "#083344", panel: "#164e63b3", isLight: false } }, { id: "dark-blood", name: "🩸 Sangre y Ceniza", vals: { primary: "#dc2626", bolsa: "#7f1d1d", hb: "#ef4444", bg: "#1a0505", panel: "#450a0ab3", isLight: false } } ] },
+      { label: "Neón / Cyberpunk", options: [ { id: "neon-synth", name: "👾 Synthwave", vals: { primary: "#f0abfc", bolsa: "#2dd4bf", hb: "#fde047", bg: "#2c1030", panel: "#4a1c40b3", isLight: false } }, { id: "neon-cyber", name: "🦾 Cyberpunk", vals: { primary: "#fde047", bolsa: "#f43f5e", hb: "#06b6d4", bg: "#09090b", panel: "#18181bb3", isLight: false } }, { id: "neon-matrix", name: "🖥️ Matrix", vals: { primary: "#4ade80", bolsa: "#22c55e", hb: "#16a34a", bg: "#000000", panel: "#022c22b3", isLight: false } }, { id: "neon-tokyo", name: "🌃 Tokyo Night", vals: { primary: "#fb7185", bolsa: "#38bdf8", hb: "#c084fc", bg: "#111827", panel: "#1e293bb3", isLight: false } }, { id: "neon-miami", name: "🦩 Miami Vice", vals: { primary: "#f472b6", bolsa: "#2dd4bf", hb: "#fde047", bg: "#1e1b4b", panel: "#312e81b3", isLight: false } }, { id: "neon-laser", name: "🔦 Láser", vals: { primary: "#e879f9", bolsa: "#34d399", hb: "#f87171", bg: "#171717", panel: "#262626b3", isLight: false } }, { id: "neon-acid", name: "🧪 Ácido", vals: { primary: "#a3e635", bolsa: "#eab308", hb: "#22d3ee", bg: "#0f172a", panel: "#1e293bb3", isLight: false } }, { id: "neon-purple", name: "🔮 Ultra Púrpura", vals: { primary: "#d946ef", bolsa: "#a855f7", hb: "#8b5cf6", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } }, { id: "neon-blue", name: "⚡ Electric Blue", vals: { primary: "#3b82f6", bolsa: "#60a5fa", hb: "#93c5fd", bg: "#020617", panel: "#0f172ab3", isLight: false } }, { id: "neon-sunset", name: "🌇 Neón Sunset", vals: { primary: "#fb923c", bolsa: "#f43f5e", hb: "#c084fc", bg: "#2e0219", panel: "#4c0519b3", isLight: false } } ] },
+      { label: "Claros / Minimalistas", options: [ { id: "light-arctic", name: "❄️ Ártico Puro", vals: { primary: "#0ea5e9", bolsa: "#8b5cf6", hb: "#14b8a6", bg: "#f8fafc", panel: "#ffffffcc", isLight: true } }, { id: "light-ivory", name: "🦴 Marfil", vals: { primary: "#d97706", bolsa: "#be123c", hb: "#4338ca", bg: "#fdfbf7", panel: "#fefdfbcc", isLight: true } }, { id: "light-cotton", name: "☁️ Algodón", vals: { primary: "#10b981", bolsa: "#ec4899", hb: "#3b82f6", bg: "#f1f5f9", panel: "#ffffffb3", isLight: true } }, { id: "light-vanilla", name: "🍦 Vainilla", vals: { primary: "#f59e0b", bolsa: "#db2777", hb: "#0284c7", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } }, { id: "light-paper", name: "📄 Papel", vals: { primary: "#334155", bolsa: "#64748b", hb: "#475569", bg: "#fdfcfc", panel: "#ffffffb3", isLight: true } }, { id: "light-silver", name: "🥄 Plata", vals: { primary: "#64748b", bolsa: "#475569", hb: "#334155", bg: "#e2e8f0", panel: "#f8fafcb3", isLight: true } }, { id: "light-rose", name: "🌸 Rosa Pálido", vals: { primary: "#e11d48", bolsa: "#4f46e5", hb: "#059669", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } }, { id: "light-sky", name: "🌤️ Cielo Claro", vals: { primary: "#0284c7", bolsa: "#7c3aed", hb: "#ea580c", bg: "#f0f9ff", panel: "#e0f2fecc", isLight: true } }, { id: "light-mint", name: "🍃 Menta Claro", vals: { primary: "#059669", bolsa: "#2563eb", hb: "#d97706", bg: "#f0fdf4", panel: "#d1fae5cc", isLight: true } }, { id: "light-lemon", name: "🍋 Limón Suave", vals: { primary: "#d97706", bolsa: "#059669", hb: "#4f46e5", bg: "#fefce8", panel: "#fef9c3cc", isLight: true } } ] },
+      { label: "Pasteles Suaves", options: [ { id: "pastel-peach", name: "🍑 Durazno", vals: { primary: "#f97316", bolsa: "#db2777", hb: "#0284c7", bg: "#ffedd5", panel: "#fef08acc", isLight: true } }, { id: "pastel-lavender", name: "🪻 Lavanda", vals: { primary: "#9333ea", bolsa: "#0284c7", hb: "#ea580c", bg: "#faf5ff", panel: "#f3e8ffcc", isLight: true } }, { id: "pastel-babyblue", name: "🍼 Celeste Bebé", vals: { primary: "#3b82f6", bolsa: "#f43f5e", hb: "#10b981", bg: "#eff6ff", panel: "#dbeafecc", isLight: true } }, { id: "pastel-pistachio", name: "🥜 Pistacho", vals: { primary: "#65a30d", bolsa: "#0284c7", hb: "#8b5cf6", bg: "#f7fee7", panel: "#dcfce7cc", isLight: true } }, { id: "pastel-pink", name: "🎀 Rosa Pastel", vals: { primary: "#ec4899", bolsa: "#8b5cf6", hb: "#06b6d4", bg: "#fdf2f8", panel: "#fce7f3cc", isLight: true } }, { id: "pastel-butter", name: "🧈 Manteca", vals: { primary: "#eab308", bolsa: "#ec4899", hb: "#14b8a6", bg: "#fefce8", panel: "#fef08acc", isLight: true } }, { id: "pastel-lilac", name: "💐 Lila", vals: { primary: "#d946ef", bolsa: "#0ea5e9", hb: "#f59e0b", bg: "#fdf4ff", panel: "#fae8ffcc", isLight: true } }, { id: "pastel-mint", name: "🌿 Menta Pastel", vals: { primary: "#14b8a6", bolsa: "#a855f7", hb: "#f43f5e", bg: "#f0fdfa", panel: "#ccfbf1cc", isLight: true } }, { id: "pastel-sand", name: "🏖️ Arena", vals: { primary: "#b45309", bolsa: "#1d4ed8", hb: "#047857", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } }, { id: "pastel-coral", name: "🐠 Coral Pastel", vals: { primary: "#f43f5e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } } ] },
+      { label: "Estéticas / Vibes", options: [ { id: "vibe-coffee", name: "☕ Café Latte", vals: { primary: "#b45309", bolsa: "#14b8a6", hb: "#6366f1", bg: "#292524", panel: "#44403cb3", isLight: false } }, { id: "vibe-matcha", name: "🍵 Matcha", vals: { primary: "#4d7c0f", bolsa: "#0369a1", hb: "#b45309", bg: "#f7fee7", panel: "#ecfccbcc", isLight: true } }, { id: "vibe-grape", name: "🍇 Uva", vals: { primary: "#7e22ce", bolsa: "#be123c", hb: "#15803d", bg: "#3b0764", panel: "#581c87b3", isLight: false } }, { id: "vibe-berry", name: "🍓 Frutos Rojos", vals: { primary: "#be123c", bolsa: "#6d28d9", hb: "#b45309", bg: "#2e0219", panel: "#4c0519b3", isLight: false } }, { id: "vibe-autumn", name: "🍂 Otoño", vals: { primary: "#ea580c", bolsa: "#b91c1c", hb: "#a16207", bg: "#451a03", panel: "#78350fb3", isLight: false } }, { id: "vibe-desert", name: "🐪 Desierto", vals: { primary: "#d97706", bolsa: "#c2410c", hb: "#b45309", bg: "#78350f", panel: "#92400eb3", isLight: false } }, { id: "vibe-galaxy", name: "🌌 Galaxia", vals: { primary: "#c084fc", bolsa: "#38bdf8", hb: "#f472b6", bg: "#0f172a", panel: "#1e1b4bb3", isLight: false } }, { id: "vibe-aurora", name: "🌠 Aurora Boreal", vals: { primary: "#34d399", bolsa: "#818cf8", hb: "#a78bfa", bg: "#064e3b", panel: "#065f46b3", isLight: false } }, { id: "vibe-twilight", name: "🌆 Crepúsculo", vals: { primary: "#f472b6", bolsa: "#818cf8", hb: "#fb923c", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } }, { id: "vibe-candy", name: "🍬 Caramelo", vals: { primary: "#f43f5e", bolsa: "#0ea5e9", hb: "#eab308", bg: "#fdf2f8", panel: "#fbcfe8cc", isLight: true } }, { id: "vibe-tangerine", name: "🍊 Mandarina", vals: { primary: "#f97316", bolsa: "#84cc16", hb: "#06b6d4", bg: "#fff7ed", panel: "#ffedd5cc", isLight: true } }, { id: "vibe-dracula", name: "🧛 Drácula", vals: { primary: "#ff79c6", bolsa: "#bd93f9", hb: "#50fa7b", bg: "#282a36", panel: "#44475ab3", isLight: false } }, { id: "vibe-monokai", name: "🦇 Monokai", vals: { primary: "#a6e22e", bolsa: "#fd971f", hb: "#66d9ef", bg: "#272822", panel: "#3e3d32b3", isLight: false } }, { id: "vibe-nord", name: "🧭 Nord", vals: { primary: "#a3be8c", bolsa: "#b48ead", hb: "#81a1c1", bg: "#2e3440", panel: "#3b4252b3", isLight: false } }, { id: "vibe-hacker", name: "💻 Hacker", vals: { primary: "#22c55e", bolsa: "#16a34a", hb: "#4ade80", bg: "#000000", panel: "#052e16b3", isLight: false } } ] }
     ];
 
     function populateThemeSelect() {
-      const select = document.getElementById('cfg-preset');
-      select.innerHTML = "";
+      const select = document.getElementById('cfg-preset'); select.innerHTML = "";
       THEME_GROUPS.forEach(group => {
         let optgroup = document.createElement('optgroup'); optgroup.label = group.label;
-        group.options.forEach(opt => {
-          let option = document.createElement('option'); option.value = opt.id; option.innerText = opt.name; optgroup.appendChild(option);
-        });
+        group.options.forEach(opt => { let option = document.createElement('option'); option.value = opt.id; option.innerText = opt.name; optgroup.appendChild(option); });
         select.appendChild(optgroup);
       });
       let customGroup = document.createElement('optgroup'); customGroup.label = "Personalizado";
@@ -438,10 +372,7 @@
     }
 
     function getThemeValues(id) {
-      for(let g of THEME_GROUPS) {
-        let found = g.options.find(o => o.id === id); if(found) return found.vals;
-      }
-      return null;
+      for(let g of THEME_GROUPS) { let found = g.options.find(o => o.id === id); if(found) return found.vals; } return null;
     }
 
     function formatMoney(amount) {
@@ -484,7 +415,7 @@
 
     async function init() {
       populateThemeSelect();
-      cargarDesdeCache(); // Pinta visualmente al instante al abrir
+      cargarDesdeCache(); 
       
       const todayStr = toLocalISODate(new Date());
       document.getElementById('u-fecha').value = todayStr; document.getElementById('d-fecha').value = todayStr; document.getElementById('a-fecha').value = todayStr;
@@ -535,10 +466,7 @@
       }
     }
     
-    function closeConfigModal() { 
-       document.getElementById('modal-config').classList.add('hidden'); 
-       applySavedConfig(); 
-    }
+    function closeConfigModal() { document.getElementById('modal-config').classList.add('hidden'); applySavedConfig(); }
     
     function switchCfgTab(tabId) {
       document.getElementById('cfg-fecha').classList.add('hidden'); document.getElementById('cfg-tema').classList.add('hidden'); document.getElementById(tabId).classList.remove('hidden');
@@ -553,9 +481,7 @@
       if (preset === "custom") {
          cBox.classList.remove('hidden');
          updateDOMTheme({ primary: document.getElementById('col-primary').value, bolsa: document.getElementById('col-bolsa').value, hb: document.getElementById('col-hb').value, bg: document.getElementById('col-bg').value, panel: "#1e293bb3", isLight: document.getElementById('col-islight').checked });
-      } else {
-         cBox.classList.add('hidden'); updateDOMTheme(getThemeValues(preset));
-      }
+      } else { cBox.classList.add('hidden'); updateDOMTheme(getThemeValues(preset)); }
     }
 
     function updateDOMTheme(colors) {
@@ -592,7 +518,11 @@
     }
     // ---------------------------------------
 
-    function manualSync() { document.querySelectorAll('.sync-icon').forEach(el => el.classList.add('syncing-spin')); fetchData(true); }
+    function manualSync() { 
+      document.getElementById('btn-manual-sync').classList.add('hidden');
+      document.getElementById('sync-status').classList.remove('hidden');
+      fetchData(true); 
+    }
 
     function switchTab(tabId) {
       document.querySelectorAll('.nav-form').forEach(f => f.classList.add('hidden')); document.getElementById(tabId).classList.remove('hidden');
@@ -621,40 +551,92 @@
     function setupEnterNavigation() { document.querySelectorAll('form').forEach(form => { const inputs = Array.from(form.querySelectorAll('input, select, button[type="submit"]')); inputs.forEach((input, index) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (index < inputs.length - 1) inputs[index + 1].focus(); } }); }); }); }
 
     async function fetchData(showVisuals = true) {
-      if(showVisuals) document.getElementById('sync-status').classList.remove('hidden');
+      if(showVisuals) {
+         document.getElementById('btn-manual-sync').classList.add('hidden');
+         document.getElementById('sync-status').classList.remove('hidden');
+      }
       try {
-        const cacheBuster = "?t=" + new Date().getTime();
-        const res = await fetch(API_URL + cacheBuster); const data = await res.json();
+        const cacheBuster = "?t=" + Date.now() + Math.random(); 
+        const res = await fetch(API_URL + cacheBuster, { cache: "no-store" }); 
+        if(!res.ok) throw new Error("Status: " + res.status);
+        const data = await res.json();
+        
         state.hb = parseFloat(data.hb) || 0; state.bs = parseFloat(data.bs) || 0;
-        state.movements = data.movements || []; state.config = data.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+        state.movements = data.movements || []; 
+        state.config = data.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+        
         applySavedConfig(); guardarEnCache(); render();
-      } catch (e) { console.error("Error", e); }
-      finally { document.getElementById('sync-status').classList.add('hidden'); document.querySelectorAll('.sync-icon').forEach(el => el.classList.remove('syncing-spin')); }
+      } catch (e) { 
+        console.error("Error", e); 
+        displayErrorBox("⚠️ Error de Conexión: Revisá tu internet o actualizá Google Apps Script.");
+      }
+      finally { 
+        document.getElementById('sync-status').classList.add('hidden'); 
+        document.getElementById('btn-manual-sync').classList.remove('hidden'); 
+      }
     }
 
     async function syncBackend(payload) {
+      document.getElementById('btn-manual-sync').classList.add('hidden');
       document.getElementById('sync-status').classList.remove('hidden');
-      try { await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); setTimeout(() => fetchData(false), 1500); } 
-      catch (e) { console.error("Error", e); }
+      try { 
+         await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); 
+         setTimeout(() => fetchData(false), 2500); 
+      } catch (e) { 
+         console.error("Error", e); 
+         displayErrorBox("⚠️ Error al guardar. Intentá de nuevo.");
+         document.getElementById('sync-status').classList.add('hidden'); 
+         document.getElementById('btn-manual-sync').classList.remove('hidden');
+      }
+    }
+
+    // --- NUEVA FUNCIÓN: PASAR SOBRANTE MANUAL A LA BOLSA ---
+    function pasarSobranteABolsa() {
+       const { baseDailyBudget, gastosPorDia } = calculateBudgets();
+       const todayStr = toLocalISODate(new Date());
+       const sobranteHoy = baseDailyBudget - (gastosPorDia[todayStr] || 0);
+
+       if (sobranteHoy <= 0) {
+          alert("¡No tenés saldo sobrante hoy para enviar a la Bolsa!");
+          return;
+       }
+
+       if(confirm(`¿Querés guardar los ${formatMoney(sobranteHoy)} que te sobraron hoy directo en tu Bolsa de Saldos?`)) {
+          let amount = sobranteHoy;
+          let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
+          
+          state.bs += amount;
+          
+          let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Ahorro Diario", amount: amount, concept: "Sobrante del Día", target: "Bolsa", dates: [todayStr], newHB: state.hb, newBS: state.bs };
+          state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Ahorro Diario", monto: amount, concepto: "Sobrante del Día", target: "Bolsa", fechas_afectadas: JSON.stringify([todayStr]) });
+          syncBackend(newMovement); render();
+       }
     }
 
     function reverseMath(m) {
       let amt = parseFloat(m.monto); let isNegative = amt < 0; let absAmt = Math.abs(amt);
       let isExpense = (m.tipo === "Gasto Único" || m.tipo === "Gasto Divisible" || m.tipo === "Ajuste T-3" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5");
       let isIncome = (m.tipo === "Ajuste T-2"); let isInjection = (m.tipo === "Ajuste T-6" || m.tipo === "Ajuste T-7" || m.tipo === "Ajuste T-8");
+      let isAhorro = (m.tipo === "Ahorro Diario");
+
       if (isExpense) { state.hb += amt; if(m.target === "Bolsa" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5") state.bs += amt; } 
       else if (isIncome) { state.hb -= amt; state.bs -= amt; } 
       else if (isInjection) { if (m.tipo === "Ajuste T-8") state.bs += absAmt; }
       else if (m.tipo === "Ajuste T-1") { state.hb -= amt; }
+      else if (isAhorro) { state.bs -= amt; }
     }
+
     function applyMath(m) {
       let amt = parseFloat(m.monto); let absAmt = Math.abs(amt);
       let isExpense = (m.tipo === "Gasto Único" || m.tipo === "Gasto Divisible" || m.tipo === "Ajuste T-3" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5");
       let isIncome = (m.tipo === "Ajuste T-2"); let isInjection = (m.tipo === "Ajuste T-6" || m.tipo === "Ajuste T-7" || m.tipo === "Ajuste T-8");
+      let isAhorro = (m.tipo === "Ahorro Diario");
+
       if (isExpense) { state.hb -= amt; if(m.target === "Bolsa" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5") state.bs -= amt; } 
       else if (isIncome) { state.hb += amt; state.bs += amt; } 
       else if (isInjection) { if (m.tipo === "Ajuste T-8") state.bs -= absAmt; }
       else if (m.tipo === "Ajuste T-1") { state.hb += amt; }
+      else if (isAhorro) { state.bs += amt; }
     }
 
     function openEditModal(id) {
@@ -722,7 +704,7 @@
         if (amount > limit && !confirm(`¡Cuidado! Superás el presupuesto (${formatMoney(limit)}). ¿Guardar igual?`)) return;
       }
       if (isBolsa) { state.bs -= amount; state.hb -= amount; } else { state.hb -= amount; }
-      let datesArr = isBolsa ? [] : [targetDate]; let idUnico = new Date().toISOString();
+      let datesArr = isBolsa ? [] : [targetDate]; let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
       let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Gasto Único", amount, concept, target: isBolsa ? "Bolsa" : "Diario", dates: datesArr, newHB: state.hb, newBS: state.bs };
       state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Gasto Único", monto: amount, concepto: concept, target: isBolsa ? "Bolsa" : "Diario", fechas_afectadas: JSON.stringify(datesArr) });
       syncBackend(newMovement); clearForm('tab-unico'); render();
@@ -739,7 +721,7 @@
       const { baseDailyBudget, gastosPorDia } = calculateBudgets();
       let chunk = amount / dias; let limit = baseDailyBudget - (gastosPorDia[affectedDates[0]] || 0);
       if (chunk > limit && !confirm(`La cuota diaria (${formatMoney(chunk)}) supera lo libre hoy (${formatMoney(limit)}). ¿Guardar?`)) return;
-      state.hb -= amount; let idUnico = new Date().toISOString();
+      state.hb -= amount; let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
       let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Gasto Divisible", amount, concept, target: "Diario", dates: affectedDates, newHB: state.hb };
       state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Gasto Divisible", monto: amount, concepto: concept, target: "Diario", fechas_afectadas: JSON.stringify(affectedDates) });
       syncBackend(newMovement); clearForm('tab-divisible'); render();
@@ -758,7 +740,7 @@
       } else {
           switch(tipo) { case "1": state.hb += amount; break; case "2": state.hb += amount; state.bs += amount; break; case "3": state.hb -= amount; break; case "4": state.hb -= amount; state.bs -= amount; break; case "5": state.bs += amount; break; }
       }
-      let idUnico = new Date().toISOString();
+      let idUnico = new Date().toISOString() + Math.random().toString(36).substr(2, 5);
       let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: `Ajuste T-${tipo}`, amount, concept, target: targetName, dates: fechasAfectadas, newHB: state.hb, newBS: state.bs };
       state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: `Ajuste T-${tipo}`, monto: amount, concepto: concept, target: targetName, fechas_afectadas: JSON.stringify(fechasAfectadas) });
       syncBackend(newMovement); clearForm('tab-ajuste'); render();
@@ -770,7 +752,7 @@
       let reversedMovs = [...state.movements].reverse();
       reversedMovs.forEach(m => {
         let isNegative = parseFloat(m.monto) < 0; let displayMonto = Math.abs(m.monto);
-        let isIngreso = m.tipo.includes("T-1") || m.tipo.includes("T-2") || isNegative;
+        let isIngreso = m.tipo.includes("T-1") || m.tipo.includes("T-2") || isNegative || m.tipo === "Ahorro Diario";
         let colorAmount = isIngreso ? 't-primary' : 'text-slate-100'; let sign = isIngreso ? '+' : '-';
         let dateObj = m.fecha ? new Date(m.fecha) : new Date();
         let userColor = (m.usuario === "Brian") ? "bg-blue-900/50 text-blue-300 border-blue-700" : "bg-fuchsia-900/50 text-fuchsia-300 border-fuchsia-700";
