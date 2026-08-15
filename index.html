@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <title>Presupuesto Inteligente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* VARIABLES DINÁMICAS DE TEMA */
+    :root {
+      --c-primary: #10b981; 
+      --c-bolsa: #a855f7;    
+      --c-hb: #3b82f6;       
+      --c-bg: #0f172a;       
+      --c-panel: #1e293bb3;  
+    }
+
+    body { background-color: var(--c-bg); color: #f8fafc; font-family: system-ui, sans-serif; transition: background-color 0.4s ease; }
+    .glass { background: var(--c-panel); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); transition: background 0.4s ease, border-color 0.4s ease; }
+    
+    /* Mapeo de Colores Semánticos */
+    .t-primary { color: var(--c-primary); transition: color 0.4s; }
+    .bg-primary { background-color: var(--c-primary); transition: background-color 0.4s; }
+    .bg-primary-hover:hover { filter: brightness(1.15); }
+    .border-primary { border-color: var(--c-primary); transition: border-color 0.4s; }
+    .bg-primary-light { background-color: color-mix(in srgb, var(--c-primary) 12%, transparent); }
+
+    .t-bolsa { color: var(--c-bolsa); transition: color 0.4s; }
+    .border-bolsa { border-color: var(--c-bolsa); transition: border-color 0.4s; }
+    .bg-bolsa { background-color: var(--c-bolsa); transition: background-color 0.4s; }
+
+    .t-hb { color: var(--c-hb); transition: color 0.4s; }
+    .border-hb { border-color: var(--c-hb); transition: border-color 0.4s; }
+    .bg-hb-light { background-color: color-mix(in srgb, var(--c-hb) 15%, transparent); }
+    .bg-hb { background-color: var(--c-hb); transition: background-color 0.4s; }
+
+    input[type="checkbox"] { accent-color: var(--c-bolsa); }
+    .input-focus:focus { border-color: var(--c-primary); outline: none; }
+    .input-focus-hb:focus { border-color: var(--c-hb); outline: none; }
+
+    /* MOTOR DE TEMA CLARO */
+    body.theme-light { color: #0f172a; }
+    .theme-light .text-white { color: #020617 !important; }
+    .theme-light .text-slate-100 { color: #0f172a !important; }
+    .theme-light .text-slate-200 { color: #1e293b !important; }
+    .theme-light .text-slate-300 { color: #334155 !important; }
+    .theme-light .text-slate-400 { color: #475569 !important; }
+    .theme-light .text-slate-500 { color: #64748b !important; }
+    .theme-light .bg-slate-900 { background-color: #f8fafc !important; }
+    .theme-light .bg-slate-800 { background-color: #f1f5f9 !important; }
+    .theme-light .bg-slate-700 { background-color: #e2e8f0 !important; }
+    .theme-light .border-slate-800 { border-color: #cbd5e1 !important; }
+    .theme-light .border-slate-700 { border-color: #e2e8f0 !important; }
+    .theme-light .border-slate-600 { border-color: #cbd5e1 !important; }
+    .theme-light .glass { border: 1px solid rgba(0,0,0,0.08); }
+
+    input[type="text"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scroll::-webkit-scrollbar-thumb { background: #334155; }
+    
+    /* ANIMACIONES DE SINCRONIZACIÓN */
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .syncing-spin { animation: spin 1s linear infinite; }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); transform: scale(1); }
+      50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8); transform: scale(1.03); }
+    }
+    .sync-glow { animation: pulse-glow 1.4s ease-in-out infinite; }
+  </style>
+</head>
+<body id="app-body" class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-start dark">
+
+  <!-- Encabezado y Opciones -->
+  <div class="flex justify-between items-center mb-4 relative">
+    <div class="flex gap-1.5 items-center shrink-0">
+      <button id="user-brian" onclick="setUser('Brian')" class="px-3 py-1.5 text-xs rounded-full transition-all shadow">Brian</button>
+      <button id="user-virginia" onclick="setUser('Virginia')" class="px-3 py-1.5 text-xs rounded-full transition-all shadow">Virginia</button>
+      <button onclick="openConfigModal()" class="px-2 py-1.5 text-sm rounded-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-all shadow" title="Configuración">⚙️</button>
+    </div>
+
+    <!-- Indicador de Sincronización Destacado -->
+    <div class="flex items-center gap-2 overflow-visible">
+      <div id="sync-status" class="hidden flex items-center gap-1.5 text-xs text-amber-300 font-extrabold bg-amber-950/90 px-3 py-1.5 rounded-full border border-amber-500/80 shadow-lg whitespace-nowrap sync-glow">
+        <span class="inline-block syncing-spin text-sm">⏳</span> Sincronizando...
+      </div>
+      <div class="flex flex-col items-end shrink-0">
+        <span id="active-user" class="text-[11px] font-bold text-slate-400">Usuario...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Central -->
+  <div class="grid grid-cols-2 gap-3 mb-4">
+    <div class="glass p-4 rounded-xl col-span-2 text-center border-l-4 border-primary bg-primary-light relative overflow-hidden shadow-lg">
+      <span class="text-xs t-primary block uppercase tracking-wider font-bold mb-1">Presupuesto para Hoy</span>
+      <span id="display-today" class="text-4xl font-black t-primary">$ 0,00</span>
+    </div>
+    
+    <div class="glass p-3 rounded-xl border-l-2 border-bolsa text-center flex flex-col justify-center shadow-md">
+      <span class="text-[11px] text-slate-400 block uppercase font-bold">Bolsa de Saldos</span>
+      <span id="display-bs" class="text-lg font-bold t-bolsa mt-1 block">$ 0,00</span>
+    </div>
+
+    <div class="glass p-3 rounded-xl border-l-2 border-slate-600 text-center flex flex-col justify-center shadow-md">
+      <span class="text-[11px] text-slate-400 block uppercase font-bold">Mañana</span>
+      <span id="display-tomorrow" class="text-lg font-bold text-slate-100 mt-1 block">$ 0,00</span>
+    </div>
+
+    <div class="glass p-3 rounded-xl flex flex-col justify-between border-l-2 border-hb text-center shadow-md">
+      <div>
+        <span class="text-[11px] text-slate-400 block uppercase font-bold">Home Banking</span>
+        <span id="display-hb" class="text-base font-bold t-hb mt-1 block">$ 0,00</span>
+      </div>
+      <button onclick="focusUpdateHB()" class="mt-2 bg-hb-light hover:bg-slate-700 t-hb py-1 rounded text-[11px] font-bold border border-hb transition-colors w-full">Actualizar Saldo</button>
+    </div>
+
+    <div onclick="openCalendarModal()" class="glass p-3 rounded-xl border-l-2 border-indigo-500 text-center flex flex-col justify-between cursor-pointer hover:bg-slate-800/80 transition-all group shadow-md">
+      <div>
+        <span class="text-[11px] text-slate-400 block uppercase font-bold">Días Restantes</span>
+        <span id="display-days" class="text-xl font-black text-indigo-400 mt-0.5 block">0 Días</span>
+      </div>
+      <button type="button" class="mt-2 bg-indigo-600/30 group-hover:bg-indigo-600/50 text-indigo-400 py-1 px-1 rounded text-[10px] font-bold border border-indigo-500/30 transition-all">
+        📅 Ver Presupuestos
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Rápido Actualizar HB -->
+  <div id="hb-quick-modal" onclick="if(event.target === this) closeHBUpdate()" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div class="glass w-full max-w-sm p-5 rounded-2xl border border-hb shadow-xl">
+      <label class="text-xs t-hb font-bold block mb-3 text-center uppercase tracking-wide">Ingresar Nuevo Saldo (HB)</label>
+      <input type="text" id="input-hb-update" inputmode="decimal" placeholder="Ej: 500000,50" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-white text-lg font-bold mb-4 text-center input-focus-hb">
+      <div class="flex gap-2">
+        <button onclick="saveHBUpdate()" class="flex-1 bg-hb hover:brightness-110 text-white py-2.5 rounded-lg text-sm font-bold shadow">Guardar</button>
+        <button onclick="closeHBUpdate()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-lg text-sm border border-slate-700">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Modos de Carga -->
+  <div class="flex border-b border-slate-800 mb-4 text-xs font-bold">
+    <button onclick="switchTab('tab-unico')" id="btn-tab-unico" class="flex-1 py-3 t-primary border-b-2 border-primary transition-all text-center">Gasto Único</button>
+    <button onclick="switchTab('tab-divisible')" id="btn-tab-divisible" class="flex-1 py-3 text-slate-500 transition-all text-center">Divisible</button>
+    <button onclick="switchTab('tab-ajuste')" id="btn-tab-ajuste" class="flex-1 py-3 text-slate-500 transition-all text-center">Ajustes</button>
+  </div>
+
+  <!-- Formulario 1: Gasto Único -->
+  <form id="tab-unico" class="space-y-3 nav-form" onsubmit="submitUnico(event)">
+    <input type="text" id="u-monto" inputmode="decimal" placeholder="Monto del gasto ($)" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white font-bold input-focus">
+    <input type="date" id="u-fecha" class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm input-focus">
+    <input type="text" id="u-concepto" placeholder="¿En qué se gastó? (Detalle)" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm input-focus">
+    <label class="flex items-center gap-2 text-sm t-bolsa font-semibold cursor-pointer p-1">
+      <input type="checkbox" id="u-bolsa" onchange="toggleBolsaUnico(this)" class="w-4 h-4"> Descontar directo de Bolsa
+    </label>
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="flex-1 bg-primary bg-primary-hover text-white font-bold text-sm py-3 rounded-lg shadow-lg">Guardar Gasto</button>
+      <button type="button" onclick="clearForm('tab-unico')" class="bg-slate-800 p-3 rounded-lg text-sm text-slate-400">Limpiar</button>
+    </div>
+  </form>
+
+  <!-- Formulario 2: Gasto Divisible -->
+  <form id="tab-divisible" class="space-y-3 nav-form hidden" onsubmit="submitDivisible(event)">
+    <input type="text" id="d-monto" inputmode="decimal" placeholder="Monto Total a dividir ($)" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white font-bold input-focus">
+    <input type="number" id="d-dias" placeholder="Días a dividir (Vacío = hasta fin de ciclo)" class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm input-focus">
+    <label class="text-xs text-slate-400 ml-1">Fecha de inicio del gasto:</label>
+    <input type="date" id="d-fecha" class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm mt-0 input-focus">
+    <input type="text" id="d-concepto" placeholder="Detalle del gasto" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm input-focus">
+    <label class="flex items-center gap-2 text-sm t-bolsa font-semibold cursor-pointer p-1">
+      <input type="checkbox" id="d-bolsa" onchange="redirectDivisibleToUnico(this)" class="w-4 h-4"> Descontar de Bolsa (Gasto Único)
+    </label>
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="flex-1 bg-primary bg-primary-hover text-white font-bold text-sm py-3 rounded-lg shadow-lg">Dividir y Guardar</button>
+      <button type="button" onclick="clearForm('tab-divisible')" class="bg-slate-800 p-3 rounded-lg text-sm text-slate-400">Limpiar</button>
+    </div>
+  </form>
+
+  <!-- Formulario 3: Ajustes -->
+  <form id="tab-ajuste" class="space-y-3 nav-form hidden" onsubmit="submitAjuste(event)">
+    <input type="text" id="a-monto" inputmode="decimal" placeholder="Monto del movimiento ($)" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white font-bold input-focus">
+    <input type="text" id="a-concepto" placeholder="Concepto o justificación" required class="w-full bg-slate-800/60 border border-slate-700 p-3 rounded-lg text-white text-sm input-focus">
+    <select id="a-tipo" onchange="toggleAjusteFields()" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-white text-xs input-focus">
+      <option value="1">1. Ingresar plata a Home Banking (Sumar al saldo)</option>
+      <option value="2">2. Ingresar plata directo a Bolsa de Saldos</option>
+      <option value="3">3. Restar plata del Home Banking general</option>
+      <option value="4">4. Restar plata de Bolsa de Saldos</option>
+      <option value="5">5. Mover de HB a Bolsa de Saldos (Ahorro)</option>
+      <option value="6">6. Agregar de HB a Presupuesto Diario (Hoy)</option>
+      <option value="7">7. Agregar de HB a día(s) específico(s)</option>
+      <option value="8">8. Agregar de Bolsa a día(s) específico(s)</option>
+    </select>
+    <div id="a-extra-fields" class="hidden space-y-2 mt-2 bg-slate-800/40 p-3 rounded-lg border border-slate-700">
+        <label class="text-xs text-slate-400">A partir de qué fecha y en cuántos días:</label>
+        <input type="date" id="a-fecha" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white text-sm input-focus">
+        <input type="number" id="a-dias" placeholder="Cant. días (Ej: 1 o más)" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white text-sm input-focus">
+    </div>
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="flex-1 bg-primary bg-primary-hover text-white font-bold text-sm py-3 rounded-lg shadow-lg">Ejecutar Acción</button>
+      <button type="button" onclick="clearForm('tab-ajuste')" class="bg-slate-800 p-3 rounded-lg text-sm text-slate-400">Limpiar</button>
+    </div>
+  </form>
+
+  <!-- Historial de Movimientos -->
+  <div class="mt-6 pb-10">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">📃 Últimos Movimientos</h3>
+      <button onclick="manualSync()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 flex items-center gap-1 transition-all">
+        <span class="sync-icon">🔄</span> Actualizar
+      </button>
+    </div>
+    <div id="bottom-movimientos" class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scroll"></div>
+  </div>
+
+  <!-- MODAL DE CONFIGURACIÓN Y TEMAS -->
+  <div id="modal-config" onclick="if(event.target === this) closeConfigModal()" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+    <div class="glass w-full max-w-sm rounded-2xl border border-slate-600 p-4 flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+        <h2 class="text-base font-bold text-white">⚙️ Preferencias</h2>
+        <button onclick="closeConfigModal()" class="w-7 h-7 rounded-full bg-slate-800 text-slate-400 font-bold text-xs hover:bg-slate-700 border border-slate-700">✕</button>
+      </div>
+
+      <div class="flex border-b border-slate-700 mb-4 text-xs font-bold">
+        <button onclick="switchCfgTab('cfg-fecha')" id="btn-cfg-fecha" class="flex-1 py-2 text-blue-400 border-b-2 border-blue-400 transition-all">Fecha Cobro</button>
+        <button onclick="switchCfgTab('cfg-tema')" id="btn-cfg-tema" class="flex-1 py-2 text-slate-500 transition-all">Estilo Visual</button>
+      </div>
+
+      <!-- Panel Fecha -->
+      <div id="cfg-fecha" class="space-y-4">
+        <label class="flex items-start gap-2 text-sm text-slate-300">
+          <input type="checkbox" id="cfg-auto-date" onchange="toggleAutoDate()" class="w-4 h-4 mt-1 accent-blue-500">
+          <div>
+             <span class="font-bold text-white block">Automático (Recomendado)</span>
+             <span class="text-[10px] text-slate-400 block mt-0.5">Calcula feriados oficiales automáticamente.</span>
+          </div>
+        </label>
+        <div id="cfg-manual-box" class="hidden p-3 bg-slate-900 border border-slate-700 rounded-lg">
+          <label class="text-xs text-slate-400 block mb-1">Fijar fecha manualmente:</label>
+          <input type="date" id="cfg-manual-date" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white text-sm outline-none">
+        </div>
+      </div>
+
+      <!-- Panel Tema -->
+      <div id="cfg-tema" class="hidden space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Elegir un Tema (<span id="user-theme-label" class="text-blue-400 font-bold">Brian</span>):</label>
+          <select id="cfg-preset" onchange="applyPreset()" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white text-sm outline-none custom-scroll">
+          </select>
+        </div>
+        <div id="cfg-colors-box" class="hidden grid grid-cols-2 gap-3 p-3 bg-slate-900 border border-slate-700 rounded-lg">
+           <div><label class="text-[10px] text-slate-400 block mb-1">Principal</label><input type="color" id="col-primary" class="w-full h-8 cursor-pointer rounded border border-slate-600 bg-slate-800"></div>
+           <div><label class="text-[10px] text-slate-400 block mb-1">Bolsa</label><input type="color" id="col-bolsa" class="w-full h-8 cursor-pointer rounded border border-slate-600 bg-slate-800"></div>
+           <div><label class="text-[10px] text-slate-400 block mb-1">Home Bank</label><input type="color" id="col-hb" class="w-full h-8 cursor-pointer rounded border border-slate-600 bg-slate-800"></div>
+           <div><label class="text-[10px] text-slate-400 block mb-1">Fondo App</label><input type="color" id="col-bg" class="w-full h-8 cursor-pointer rounded border border-slate-600 bg-slate-800"></div>
+           <label class="col-span-2 flex items-center gap-2 text-xs text-slate-300 mt-1">
+             <input type="checkbox" id="col-islight" onchange="applyPreset()" class="w-4 h-4 accent-blue-500"> Tema Claro (Letras Oscuras)
+           </label>
+        </div>
+      </div>
+
+      <button onclick="saveConfiguration()" class="mt-5 w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold shadow">Guardar Cambios</button>
+    </div>
+  </div>
+
+  <!-- Modal de Calendario -->
+  <div id="modal-calendario" onclick="if(event.target === this) closeCalendarModal()" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[50] flex items-center justify-center p-4">
+    <div class="glass w-full max-w-md max-h-[85vh] rounded-2xl border border-indigo-500/30 p-4 flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">📅 Presupuesto por Día</h2>
+          <p class="text-[11px] text-indigo-400 font-semibold" id="modal-days-subtitle">Días Restantes</p>
+        </div>
+        <button onclick="closeCalendarModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 font-bold text-sm hover:bg-slate-700 border border-slate-700">✕</button>
+      </div>
+      <div id="modal-calendario-body" class="space-y-2 overflow-y-auto pr-1 custom-scroll flex-1"></div>
+      <button onclick="closeCalendarModal()" class="mt-4 w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl font-bold text-xs border border-slate-700">Cerrar Ventana</button>
+    </div>
+  </div>
+
+  <!-- Modal para Editar / Eliminar -->
+  <div id="modal-editar" onclick="if(event.target === this) closeEditModal()" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+    <div class="glass w-full max-w-sm rounded-2xl border border-slate-600 p-5 shadow-2xl">
+      <h2 class="text-lg font-bold text-white mb-1">Editar Movimiento</h2>
+      <p id="edit-mov-tipo" class="text-xs text-slate-400 mb-4"></p>
+      <input type="hidden" id="edit-id">
+      
+      <label class="text-xs text-slate-400 block mb-1">Concepto:</label>
+      <input type="text" id="edit-concepto" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-white text-sm mb-3 outline-none focus:border-amber-500">
+      
+      <label class="text-xs text-slate-400 block mb-1">Monto (Valor Absoluto):</label>
+      <input type="text" id="edit-monto" inputmode="decimal" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-white font-bold mb-5 outline-none focus:border-amber-500">
+      
+      <div class="flex gap-2">
+        <button onclick="saveEdit()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-lg text-sm font-bold shadow">Guardar Cambios</button>
+        <button onclick="closeEditModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-lg text-sm border border-slate-600">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxqMkqNgYqcdliQkmz4foC-g6RvI9OGOw-Kai3fnltL-A9dpZC4frGYDsX7TIMxzW0R/exec"; 
+    
+    let currentUser = "Brian";
+    let state = { hb: 0, bs: 0, movements: [], config: { paydate: "", themeBrian: "", themeVirginia: "" } };
+    let feriadosOficiales = ["2026-01-01", "2026-03-24", "2026-04-02", "2026-05-01", "2026-05-25", "2026-06-20", "2026-07-09", "2026-08-17", "2026-10-12", "2026-11-20", "2026-12-25"];
+
+    // ----------------------------------------------------
+    // FUNCIÓN DE CACHÉ LOCAL VISUAL (NUEVO)
+    // ----------------------------------------------------
+    function guardarEnCache() {
+      let cacheData = { user: currentUser, config: state.config };
+      localStorage.setItem('cfg_fast_cache', JSON.stringify(cacheData));
+    }
+
+    function cargarDesdeCache() {
+      const cacheStr = localStorage.getItem('cfg_fast_cache');
+      if (cacheStr) {
+         let cache = JSON.parse(cacheStr);
+         state.config = cache.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+         setUser(cache.user || 'Brian');
+      } else {
+         const savedUser = localStorage.getItem('cfg_user');
+         setUser(savedUser ? savedUser : 'Brian');
+      }
+    }
+    // ----------------------------------------------------
+
+    async function cargarFeriadosAPI() {
+      try {
+        let year = new Date().getFullYear();
+        let res = await fetch(`https://nolaborables.com.ar/api/v2/feriados/${year}`); let data = await res.json();
+        feriadosOficiales = data.map(f => { let m = ('0' + f.mes).slice(-2); let d = ('0' + f.dia).slice(-2); return `${year}-${m}-${d}`; });
+      } catch(e) { console.log("Feriados Offline"); }
+    }
+
+    const THEME_GROUPS = [
+      {
+        label: "Oscuros / Modernos",
+        options: [
+          { id: "dark-emerald", name: "💚 Esmeralda Oscuro", vals: { primary: "#10b981", bolsa: "#a855f7", hb: "#3b82f6", bg: "#0f172a", panel: "#1e293bb3", isLight: false } },
+          { id: "dark-ruby", name: "🔴 Rubí Nocturno", vals: { primary: "#f43f5e", bolsa: "#fbbf24", hb: "#818cf8", bg: "#18181b", panel: "#27272aa6", isLight: false } },
+          { id: "dark-sapphire", name: "🔵 Zafiro Profundo", vals: { primary: "#3b82f6", bolsa: "#ec4899", hb: "#14b8a6", bg: "#172554", panel: "#164e63b3", isLight: false } },
+          { id: "dark-amethyst", name: "🟣 Amatista", vals: { primary: "#c084fc", bolsa: "#2dd4bf", hb: "#f472b6", bg: "#2e1065", panel: "#3b0764b3", isLight: false } },
+          { id: "dark-amber", name: "🟠 Ámbar Quemado", vals: { primary: "#f59e0b", bolsa: "#ef4444", hb: "#6366f1", bg: "#451a03", panel: "#78350fb3", isLight: false } },
+          { id: "dark-graphite", name: "⚫ Grafito", vals: { primary: "#94a3b8", bolsa: "#64748b", hb: "#475569", bg: "#020617", panel: "#0f172ab3", isLight: false } },
+          { id: "dark-obsidian", name: "🖤 Obsidiana", vals: { primary: "#e4e4e7", bolsa: "#a1a1aa", hb: "#d4d4d8", bg: "#000000", panel: "#18181bb3", isLight: false } },
+          { id: "dark-forest", name: "🌲 Bosque Negro", vals: { primary: "#22c55e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#052e16", panel: "#14532db3", isLight: false } },
+          { id: "dark-ocean", name: "🌊 Océano Oscuro", vals: { primary: "#06b6d4", bolsa: "#f43f5e", hb: "#3b82f6", bg: "#083344", panel: "#164e63b3", isLight: false } },
+          { id: "dark-blood", name: "🩸 Sangre y Ceniza", vals: { primary: "#dc2626", bolsa: "#7f1d1d", hb: "#ef4444", bg: "#1a0505", panel: "#450a0ab3", isLight: false } }
+        ]
+      },
+      {
+        label: "Neón / Cyberpunk",
+        options: [
+          { id: "neon-synth", name: "👾 Synthwave", vals: { primary: "#f0abfc", bolsa: "#2dd4bf", hb: "#fde047", bg: "#2c1030", panel: "#4a1c40b3", isLight: false } },
+          { id: "neon-cyber", name: "🦾 Cyberpunk", vals: { primary: "#fde047", bolsa: "#f43f5e", hb: "#06b6d4", bg: "#09090b", panel: "#18181bb3", isLight: false } },
+          { id: "neon-matrix", name: "🖥️ Matrix", vals: { primary: "#4ade80", bolsa: "#22c55e", hb: "#16a34a", bg: "#000000", panel: "#022c22b3", isLight: false } },
+          { id: "neon-tokyo", name: "🌃 Tokyo Night", vals: { primary: "#fb7185", bolsa: "#38bdf8", hb: "#c084fc", bg: "#111827", panel: "#1e293bb3", isLight: false } },
+          { id: "neon-miami", name: "🦩 Miami Vice", vals: { primary: "#f472b6", bolsa: "#2dd4bf", hb: "#fde047", bg: "#1e1b4b", panel: "#312e81b3", isLight: false } },
+          { id: "neon-laser", name: "🔦 Láser", vals: { primary: "#e879f9", bolsa: "#34d399", hb: "#f87171", bg: "#171717", panel: "#262626b3", isLight: false } },
+          { id: "neon-acid", name: "🧪 Ácido", vals: { primary: "#a3e635", bolsa: "#eab308", hb: "#22d3ee", bg: "#0f172a", panel: "#1e293bb3", isLight: false } },
+          { id: "neon-purple", name: "🔮 Ultra Púrpura", vals: { primary: "#d946ef", bolsa: "#a855f7", hb: "#8b5cf6", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } },
+          { id: "neon-blue", name: "⚡ Electric Blue", vals: { primary: "#3b82f6", bolsa: "#60a5fa", hb: "#93c5fd", bg: "#020617", panel: "#0f172ab3", isLight: false } },
+          { id: "neon-sunset", name: "🌇 Neón Sunset", vals: { primary: "#fb923c", bolsa: "#f43f5e", hb: "#c084fc", bg: "#2e0219", panel: "#4c0519b3", isLight: false } }
+        ]
+      },
+      {
+        label: "Claros / Minimalistas",
+        options: [
+          { id: "light-arctic", name: "❄️ Ártico Puro", vals: { primary: "#0ea5e9", bolsa: "#8b5cf6", hb: "#14b8a6", bg: "#f8fafc", panel: "#ffffffcc", isLight: true } },
+          { id: "light-ivory", name: "🦴 Marfil", vals: { primary: "#d97706", bolsa: "#be123c", hb: "#4338ca", bg: "#fdfbf7", panel: "#fefdfbcc", isLight: true } },
+          { id: "light-cotton", name: "☁️ Algodón", vals: { primary: "#10b981", bolsa: "#ec4899", hb: "#3b82f6", bg: "#f1f5f9", panel: "#ffffffb3", isLight: true } },
+          { id: "light-vanilla", name: "🍦 Vainilla", vals: { primary: "#f59e0b", bolsa: "#db2777", hb: "#0284c7", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } },
+          { id: "light-paper", name: "📄 Papel", vals: { primary: "#334155", bolsa: "#64748b", hb: "#475569", bg: "#fdfcfc", panel: "#ffffffb3", isLight: true } },
+          { id: "light-silver", name: "🥄 Plata", vals: { primary: "#64748b", bolsa: "#475569", hb: "#334155", bg: "#e2e8f0", panel: "#f8fafcb3", isLight: true } },
+          { id: "light-rose", name: "🌸 Rosa Pálido", vals: { primary: "#e11d48", bolsa: "#4f46e5", hb: "#059669", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } },
+          { id: "light-sky", name: "🌤️ Cielo Claro", vals: { primary: "#0284c7", bolsa: "#7c3aed", hb: "#ea580c", bg: "#f0f9ff", panel: "#e0f2fecc", isLight: true } },
+          { id: "light-mint", name: "🍃 Menta Claro", vals: { primary: "#059669", bolsa: "#2563eb", hb: "#d97706", bg: "#f0fdf4", panel: "#d1fae5cc", isLight: true } },
+          { id: "light-lemon", name: "🍋 Limón Suave", vals: { primary: "#d97706", bolsa: "#059669", hb: "#4f46e5", bg: "#fefce8", panel: "#fef9c3cc", isLight: true } }
+        ]
+      },
+      {
+        label: "Pasteles Suaves",
+        options: [
+          { id: "pastel-peach", name: "🍑 Durazno", vals: { primary: "#f97316", bolsa: "#db2777", hb: "#0284c7", bg: "#ffedd5", panel: "#fef08acc", isLight: true } },
+          { id: "pastel-lavender", name: "🪻 Lavanda", vals: { primary: "#9333ea", bolsa: "#0284c7", hb: "#ea580c", bg: "#faf5ff", panel: "#f3e8ffcc", isLight: true } },
+          { id: "pastel-babyblue", name: "🍼 Celeste Bebé", vals: { primary: "#3b82f6", bolsa: "#f43f5e", hb: "#10b981", bg: "#eff6ff", panel: "#dbeafecc", isLight: true } },
+          { id: "pastel-pistachio", name: "🥜 Pistacho", vals: { primary: "#65a30d", bolsa: "#0284c7", hb: "#8b5cf6", bg: "#f7fee7", panel: "#dcfce7cc", isLight: true } },
+          { id: "pastel-pink", name: "🎀 Rosa Pastel", vals: { primary: "#ec4899", bolsa: "#8b5cf6", hb: "#06b6d4", bg: "#fdf2f8", panel: "#fce7f3cc", isLight: true } },
+          { id: "pastel-butter", name: "🧈 Manteca", vals: { primary: "#eab308", bolsa: "#ec4899", hb: "#14b8a6", bg: "#fefce8", panel: "#fef08acc", isLight: true } },
+          { id: "pastel-lilac", name: "💐 Lila", vals: { primary: "#d946ef", bolsa: "#0ea5e9", hb: "#f59e0b", bg: "#fdf4ff", panel: "#fae8ffcc", isLight: true } },
+          { id: "pastel-mint", name: "🌿 Menta Pastel", vals: { primary: "#14b8a6", bolsa: "#a855f7", hb: "#f43f5e", bg: "#f0fdfa", panel: "#ccfbf1cc", isLight: true } },
+          { id: "pastel-sand", name: "🏖️ Arena", vals: { primary: "#b45309", bolsa: "#1d4ed8", hb: "#047857", bg: "#fffbeb", panel: "#fef3c7cc", isLight: true } },
+          { id: "pastel-coral", name: "🐠 Coral Pastel", vals: { primary: "#f43f5e", bolsa: "#eab308", hb: "#0ea5e9", bg: "#fff1f2", panel: "#ffe4e6cc", isLight: true } }
+        ]
+      },
+      {
+        label: "Estéticas / Vibes",
+        options: [
+          { id: "vibe-coffee", name: "☕ Café Latte", vals: { primary: "#b45309", bolsa: "#14b8a6", hb: "#6366f1", bg: "#292524", panel: "#44403cb3", isLight: false } },
+          { id: "vibe-matcha", name: "🍵 Matcha", vals: { primary: "#4d7c0f", bolsa: "#0369a1", hb: "#b45309", bg: "#f7fee7", panel: "#ecfccbcc", isLight: true } },
+          { id: "vibe-grape", name: "🍇 Uva", vals: { primary: "#7e22ce", bolsa: "#be123c", hb: "#15803d", bg: "#3b0764", panel: "#581c87b3", isLight: false } },
+          { id: "vibe-berry", name: "🍓 Frutos Rojos", vals: { primary: "#be123c", bolsa: "#6d28d9", hb: "#b45309", bg: "#2e0219", panel: "#4c0519b3", isLight: false } },
+          { id: "vibe-autumn", name: "🍂 Otoño", vals: { primary: "#ea580c", bolsa: "#b91c1c", hb: "#a16207", bg: "#451a03", panel: "#78350fb3", isLight: false } },
+          { id: "vibe-desert", name: "🐪 Desierto", vals: { primary: "#d97706", bolsa: "#c2410c", hb: "#b45309", bg: "#78350f", panel: "#92400eb3", isLight: false } },
+          { id: "vibe-galaxy", name: "🌌 Galaxia", vals: { primary: "#c084fc", bolsa: "#38bdf8", hb: "#f472b6", bg: "#0f172a", panel: "#1e1b4bb3", isLight: false } },
+          { id: "vibe-aurora", name: "🌠 Aurora Boreal", vals: { primary: "#34d399", bolsa: "#818cf8", hb: "#a78bfa", bg: "#064e3b", panel: "#065f46b3", isLight: false } },
+          { id: "vibe-twilight", name: "🌆 Crepúsculo", vals: { primary: "#f472b6", bolsa: "#818cf8", hb: "#fb923c", bg: "#2e1065", panel: "#4c1d95b3", isLight: false } },
+          { id: "vibe-candy", name: "🍬 Caramelo", vals: { primary: "#f43f5e", bolsa: "#0ea5e9", hb: "#eab308", bg: "#fdf2f8", panel: "#fbcfe8cc", isLight: true } },
+          { id: "vibe-tangerine", name: "🍊 Mandarina", vals: { primary: "#f97316", bolsa: "#84cc16", hb: "#06b6d4", bg: "#fff7ed", panel: "#ffedd5cc", isLight: true } },
+          { id: "vibe-dracula", name: "🧛 Drácula", vals: { primary: "#ff79c6", bolsa: "#bd93f9", hb: "#50fa7b", bg: "#282a36", panel: "#44475ab3", isLight: false } },
+          { id: "vibe-monokai", name: "🦇 Monokai", vals: { primary: "#a6e22e", bolsa: "#fd971f", hb: "#66d9ef", bg: "#272822", panel: "#3e3d32b3", isLight: false } },
+          { id: "vibe-nord", name: "🧭 Nord", vals: { primary: "#a3be8c", bolsa: "#b48ead", hb: "#81a1c1", bg: "#2e3440", panel: "#3b4252b3", isLight: false } },
+          { id: "vibe-hacker", name: "💻 Hacker", vals: { primary: "#22c55e", bolsa: "#16a34a", hb: "#4ade80", bg: "#000000", panel: "#052e16b3", isLight: false } }
+        ]
+      }
+    ];
+
+    function populateThemeSelect() {
+      const select = document.getElementById('cfg-preset');
+      select.innerHTML = "";
+      THEME_GROUPS.forEach(group => {
+        let optgroup = document.createElement('optgroup'); optgroup.label = group.label;
+        group.options.forEach(opt => {
+          let option = document.createElement('option'); option.value = opt.id; option.innerText = opt.name; optgroup.appendChild(option);
+        });
+        select.appendChild(optgroup);
+      });
+      let customGroup = document.createElement('optgroup'); customGroup.label = "Personalizado";
+      let customOpt = document.createElement('option'); customOpt.value = "custom"; customOpt.innerText = "🎨 Crear mi propio tema...";
+      customGroup.appendChild(customOpt); select.appendChild(customGroup);
+    }
+
+    function getThemeValues(id) {
+      for(let g of THEME_GROUPS) {
+        let found = g.options.find(o => o.id === id); if(found) return found.vals;
+      }
+      return null;
+    }
+
+    function formatMoney(amount) {
+      if (isNaN(amount) || amount === null) amount = 0;
+      return `$ ${new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
+    }
+    function parseAmountInput(val) {
+      if (!val) return 0;
+      let clean = val.toString().trim().replace(/\s/g, '').replace(',', '.');
+      let parsed = parseFloat(clean); return isNaN(parsed) ? 0 : parsed;
+    }
+    function toLocalISODate(d) {
+      const z = n => ('0' + n).slice(-2); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+    }
+
+    function getSecondBusinessDay(year, month) {
+      let count = 0; let day = 1;
+      while (count < 2) {
+        let date = new Date(year, month, day); let formatted = toLocalISODate(date);
+        if (date.getDay() !== 0 && date.getDay() !== 6 && !feriadosOficiales.includes(formatted)) count++;
+        if (count < 2) day++;
+      }
+      return new Date(year, month, day);
+    }
+
+    function getRemainingDates() {
+      const today = new Date();
+      let payDateStr = state.config.paydate; let payDate;
+      if (payDateStr && payDateStr !== "") {
+        let parts = payDateStr.split('-'); payDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      } else {
+        payDate = getSecondBusinessDay(today.getFullYear(), today.getMonth());
+        if (today >= payDate) payDate = getSecondBusinessDay(today.getFullYear(), today.getMonth() + 1);
+      }
+      let dates = []; let currentDate = new Date(today);
+      while(toLocalISODate(currentDate) < toLocalISODate(payDate)) { dates.push(toLocalISODate(currentDate)); currentDate.setDate(currentDate.getDate() + 1); }
+      if(dates.length === 0) dates.push(toLocalISODate(today)); 
+      return dates;
+    }
+
+    async function init() {
+      populateThemeSelect();
+      cargarDesdeCache(); // Pinta visualmente al instante al abrir
+      
+      const todayStr = toLocalISODate(new Date());
+      document.getElementById('u-fecha').value = todayStr; document.getElementById('d-fecha').value = todayStr; document.getElementById('a-fecha').value = todayStr;
+      setupEnterNavigation(); 
+      await cargarFeriadosAPI(); 
+      fetchData(true); 
+    }
+
+    function setUser(user) {
+      currentUser = user; localStorage.setItem('cfg_user', user);
+      const lblUser = document.getElementById('active-user');
+      const btnB = document.getElementById('user-brian'); const btnV = document.getElementById('user-virginia');
+      const lblUserTheme = document.getElementById('user-theme-label');
+
+      if(user === "Brian") {
+        lblUser.innerHTML = `<span class="text-blue-400 font-black">Brian</span>`; 
+        if(lblUserTheme) { lblUserTheme.innerText = "Brian"; lblUserTheme.className = "text-blue-400 font-bold"; }
+        btnB.className = "px-4 py-1.5 text-xs rounded-full bg-blue-600 text-white font-bold border border-blue-500 shadow transition-all";
+        btnV.className = "px-4 py-1.5 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition-all";
+      } else {
+        lblUser.innerHTML = `<span class="text-fuchsia-400 font-black">Virginia</span>`; 
+        if(lblUserTheme) { lblUserTheme.innerText = "Virginia"; lblUserTheme.className = "text-fuchsia-400 font-bold"; }
+        btnV.className = "px-4 py-1.5 text-xs rounded-full bg-fuchsia-600 text-white font-bold border border-fuchsia-500 shadow transition-all";
+        btnB.className = "px-4 py-1.5 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition-all";
+      }
+      applySavedConfig();
+      guardarEnCache();
+    }
+
+    // --- LOGICA DE CONFIGURACIÓN Y TEMAS ---
+    function openConfigModal() {
+      document.getElementById('modal-config').classList.remove('hidden');
+      const isAuto = !state.config.paydate;
+      document.getElementById('cfg-auto-date').checked = isAuto; document.getElementById('cfg-manual-date').value = isAuto ? "" : state.config.paydate; toggleAutoDate();
+
+      let tStr = (currentUser === "Brian") ? state.config.themeBrian : state.config.themeVirginia;
+      if(!tStr) { document.getElementById('cfg-preset').value = "dark-emerald"; applyPreset(); }
+      else if(tStr.startsWith("{")) {
+         let tObj = JSON.parse(tStr);
+         if(tObj.preset && getThemeValues(tObj.preset)) { document.getElementById('cfg-preset').value = tObj.preset; applyPreset(); }
+         else {
+           document.getElementById('cfg-preset').value = "custom";
+           document.getElementById('col-primary').value = tObj.primary || "#10b981"; document.getElementById('col-bolsa').value = tObj.bolsa || "#a855f7";
+           document.getElementById('col-hb').value = tObj.hb || "#3b82f6"; document.getElementById('col-bg').value = tObj.bg || "#0f172a";
+           document.getElementById('col-islight').checked = tObj.isLight || false;
+           applyPreset();
+         }
+      }
+    }
+    
+    function closeConfigModal() { 
+       document.getElementById('modal-config').classList.add('hidden'); 
+       applySavedConfig(); 
+    }
+    
+    function switchCfgTab(tabId) {
+      document.getElementById('cfg-fecha').classList.add('hidden'); document.getElementById('cfg-tema').classList.add('hidden'); document.getElementById(tabId).classList.remove('hidden');
+      document.getElementById('btn-cfg-fecha').className = tabId === 'cfg-fecha' ? "flex-1 py-2 text-blue-400 border-b-2 border-blue-400 transition-all" : "flex-1 py-2 text-slate-500 transition-all";
+      document.getElementById('btn-cfg-tema').className = tabId === 'cfg-tema' ? "flex-1 py-2 text-blue-400 border-b-2 border-blue-400 transition-all" : "flex-1 py-2 text-slate-500 transition-all";
+    }
+
+    function toggleAutoDate() { const isAuto = document.getElementById('cfg-auto-date').checked; document.getElementById('cfg-manual-box').classList.toggle('hidden', isAuto); }
+
+    function applyPreset() {
+      const preset = document.getElementById('cfg-preset').value; const cBox = document.getElementById('cfg-colors-box');
+      if (preset === "custom") {
+         cBox.classList.remove('hidden');
+         updateDOMTheme({ primary: document.getElementById('col-primary').value, bolsa: document.getElementById('col-bolsa').value, hb: document.getElementById('col-hb').value, bg: document.getElementById('col-bg').value, panel: "#1e293bb3", isLight: document.getElementById('col-islight').checked });
+      } else {
+         cBox.classList.add('hidden'); updateDOMTheme(getThemeValues(preset));
+      }
+    }
+
+    function updateDOMTheme(colors) {
+      if(!colors) return;
+      document.documentElement.style.setProperty('--c-primary', colors.primary); document.documentElement.style.setProperty('--c-bolsa', colors.bolsa);
+      document.documentElement.style.setProperty('--c-hb', colors.hb); document.documentElement.style.setProperty('--c-bg', colors.bg); document.documentElement.style.setProperty('--c-panel', colors.panel || "#1e293bb3");
+      const body = document.getElementById('app-body');
+      if(colors.isLight) { body.classList.remove('dark'); body.classList.add('theme-light'); } else { body.classList.add('dark'); body.classList.remove('theme-light'); }
+    }
+
+    function applySavedConfig() {
+      let tStr = (currentUser === "Brian") ? state.config.themeBrian : state.config.themeVirginia;
+      if(tStr && tStr.startsWith("{")) { 
+         let tObj = JSON.parse(tStr); 
+         if(tObj.preset && getThemeValues(tObj.preset)) updateDOMTheme(getThemeValues(tObj.preset)); 
+         else updateDOMTheme(tObj);
+      } else { updateDOMTheme(getThemeValues('dark-emerald')); }
+    }
+
+    function saveConfiguration() {
+      const isAuto = document.getElementById('cfg-auto-date').checked;
+      const paydate = isAuto ? "" : document.getElementById('cfg-manual-date').value;
+      const preset = document.getElementById('cfg-preset').value;
+      let themeData = { preset: preset };
+      if(preset === "custom") { themeData = { primary: document.getElementById('col-primary').value, bolsa: document.getElementById('col-bolsa').value, hb: document.getElementById('col-hb').value, bg: document.getElementById('col-bg').value, panel: "#1e293bb3", isLight: document.getElementById('col-islight').checked }; }
+
+      let themeJson = JSON.stringify(themeData);
+      state.config.paydate = paydate; 
+      if(currentUser === "Brian") state.config.themeBrian = themeJson; else state.config.themeVirginia = themeJson;
+      
+      applySavedConfig(); guardarEnCache();
+      syncBackend({ action: "updateConfig", user: currentUser, paydate: paydate, theme: themeJson });
+      document.getElementById('modal-config').classList.add('hidden'); render();
+    }
+    // ---------------------------------------
+
+    function manualSync() { document.querySelectorAll('.sync-icon').forEach(el => el.classList.add('syncing-spin')); fetchData(true); }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-form').forEach(f => f.classList.add('hidden')); document.getElementById(tabId).classList.remove('hidden');
+      ['unico', 'divisible', 'ajuste'].forEach(t => {
+        const btn = document.getElementById(`btn-tab-${t}`);
+        if (`tab-${t}` === tabId) btn.className = "flex-1 py-3 t-primary border-b-2 border-primary font-bold transition-all text-center";
+        else btn.className = "flex-1 py-3 text-slate-500 font-normal transition-all text-center";
+      });
+    }
+
+    function openCalendarModal() { renderCalendarModal(); document.getElementById('modal-calendario').classList.remove('hidden'); }
+    function closeCalendarModal() { document.getElementById('modal-calendario').classList.add('hidden'); }
+    function focusUpdateHB() { document.getElementById('hb-quick-modal').classList.remove('hidden'); document.getElementById('input-hb-update').value = ""; document.getElementById('input-hb-update').focus(); }
+    function closeHBUpdate() { document.getElementById('hb-quick-modal').classList.add('hidden'); }
+
+    function saveHBUpdate() {
+      const val = parseAmountInput(document.getElementById('input-hb-update').value);
+      if (val > 0) { state.hb = val; syncBackend({ action: "updateHB", hb: state.hb }); render(); }
+      closeHBUpdate();
+    }
+
+    function toggleBolsaUnico(checkbox) { document.getElementById('u-fecha').value = toLocalISODate(new Date()); document.getElementById('u-fecha').disabled = checkbox.checked; }
+    function redirectDivisibleToUnico(checkbox) { if (checkbox.checked) { checkbox.checked = false; switchTab('tab-unico'); document.getElementById('u-bolsa').checked = true; toggleBolsaUnico(document.getElementById('u-bolsa')); } }
+    function toggleAjusteFields() { const extra = document.getElementById('a-extra-fields'); const val = document.getElementById('a-tipo').value; if (val === "7" || val === "8") extra.classList.remove('hidden'); else extra.classList.add('hidden'); }
+    function clearForm(formId) { document.getElementById(formId).reset(); document.getElementById('u-fecha').value = toLocalISODate(new Date()); document.getElementById('d-fecha').value = toLocalISODate(new Date()); document.getElementById('u-fecha').disabled = false; toggleAjusteFields(); }
+    function setupEnterNavigation() { document.querySelectorAll('form').forEach(form => { const inputs = Array.from(form.querySelectorAll('input, select, button[type="submit"]')); inputs.forEach((input, index) => { input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (index < inputs.length - 1) inputs[index + 1].focus(); } }); }); }); }
+
+    async function fetchData(showVisuals = true) {
+      if(showVisuals) document.getElementById('sync-status').classList.remove('hidden');
+      try {
+        const cacheBuster = "?t=" + new Date().getTime();
+        const res = await fetch(API_URL + cacheBuster); const data = await res.json();
+        state.hb = parseFloat(data.hb) || 0; state.bs = parseFloat(data.bs) || 0;
+        state.movements = data.movements || []; state.config = data.config || { paydate: "", themeBrian: "", themeVirginia: "" };
+        applySavedConfig(); guardarEnCache(); render();
+      } catch (e) { console.error("Error", e); }
+      finally { document.getElementById('sync-status').classList.add('hidden'); document.querySelectorAll('.sync-icon').forEach(el => el.classList.remove('syncing-spin')); }
+    }
+
+    async function syncBackend(payload) {
+      document.getElementById('sync-status').classList.remove('hidden');
+      try { await fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) }); setTimeout(() => fetchData(false), 1500); } 
+      catch (e) { console.error("Error", e); }
+    }
+
+    function reverseMath(m) {
+      let amt = parseFloat(m.monto); let isNegative = amt < 0; let absAmt = Math.abs(amt);
+      let isExpense = (m.tipo === "Gasto Único" || m.tipo === "Gasto Divisible" || m.tipo === "Ajuste T-3" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5");
+      let isIncome = (m.tipo === "Ajuste T-2"); let isInjection = (m.tipo === "Ajuste T-6" || m.tipo === "Ajuste T-7" || m.tipo === "Ajuste T-8");
+      if (isExpense) { state.hb += amt; if(m.target === "Bolsa" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5") state.bs += amt; } 
+      else if (isIncome) { state.hb -= amt; state.bs -= amt; } 
+      else if (isInjection) { if (m.tipo === "Ajuste T-8") state.bs += absAmt; }
+      else if (m.tipo === "Ajuste T-1") { state.hb -= amt; }
+    }
+    function applyMath(m) {
+      let amt = parseFloat(m.monto); let absAmt = Math.abs(amt);
+      let isExpense = (m.tipo === "Gasto Único" || m.tipo === "Gasto Divisible" || m.tipo === "Ajuste T-3" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5");
+      let isIncome = (m.tipo === "Ajuste T-2"); let isInjection = (m.tipo === "Ajuste T-6" || m.tipo === "Ajuste T-7" || m.tipo === "Ajuste T-8");
+      if (isExpense) { state.hb -= amt; if(m.target === "Bolsa" || m.tipo === "Ajuste T-4" || m.tipo === "Ajuste T-5") state.bs -= amt; } 
+      else if (isIncome) { state.hb += amt; state.bs += amt; } 
+      else if (isInjection) { if (m.tipo === "Ajuste T-8") state.bs -= absAmt; }
+      else if (m.tipo === "Ajuste T-1") { state.hb += amt; }
+    }
+
+    function openEditModal(id) {
+       const m = state.movements.find(x => x.fecha === id); if(!m) return;
+       document.getElementById('edit-id').value = m.fecha; document.getElementById('edit-concepto').value = m.concepto;
+       document.getElementById('edit-monto').value = Math.abs(m.monto); document.getElementById('edit-mov-tipo').innerText = `${m.tipo} - Registrado por ${m.usuario}`;
+       document.getElementById('modal-editar').classList.remove('hidden');
+    }
+    function closeEditModal() { document.getElementById('modal-editar').classList.add('hidden'); }
+    function saveEdit() {
+       const id = document.getElementById('edit-id').value; const newConcept = document.getElementById('edit-concepto').value;
+       let newMonto = parseAmountInput(document.getElementById('edit-monto').value);
+       let idx = state.movements.findIndex(x => x.fecha === id); if(idx === -1) return;
+       let m = state.movements[idx];
+       if (m.monto < 0) newMonto = -newMonto;
+       reverseMath(m); m.concepto = newConcept; m.monto = newMonto; applyMath(m);
+       syncBackend({ action: "editMovement", id: m.fecha, concept: newConcept, amount: newMonto, newHB: state.hb, newBS: state.bs });
+       render(); closeEditModal();
+    }
+    function deleteMovementDirectly(id) {
+       if(!confirm("¿Eliminar este movimiento de forma definitiva?")) return;
+       let idx = state.movements.findIndex(x => x.fecha === id); if(idx === -1) return;
+       reverseMath(state.movements[idx]); state.movements.splice(idx, 1); 
+       syncBackend({ action: "deleteMovement", id: id, newHB: state.hb, newBS: state.bs }); render();
+    }
+
+    function calculateBudgets() {
+      const dates = getRemainingDates(); const liquidHB = state.hb - state.bs;
+      let gastosEnPeriodo = 0; let gastosPorDia = {}; dates.forEach(d => gastosPorDia[d] = 0);
+      state.movements.forEach(m => {
+        if(m.fechas_afectadas && m.fechas_afectadas.length > 2) { 
+          try { let affectedDates = JSON.parse(m.fechas_afectadas);
+            if(affectedDates.length > 0) { let montoParcial = parseFloat(m.monto) / affectedDates.length; affectedDates.forEach(ad => { if (gastosPorDia.hasOwnProperty(ad)) { gastosPorDia[ad] += montoParcial; gastosEnPeriodo += montoParcial; } }); }
+          } catch(e) {}
+        }
+      });
+      const baseDailyBudget = dates.length > 0 ? (liquidHB + gastosEnPeriodo) / dates.length : 0;
+      return { dates, baseDailyBudget, gastosPorDia };
+    }
+
+    function render() {
+      const { dates, baseDailyBudget, gastosPorDia } = calculateBudgets();
+      let todayStr = toLocalISODate(new Date()); let tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); let tomorrowStr = toLocalISODate(tomorrow);
+      let todayBudget = baseDailyBudget - (gastosPorDia[todayStr] || 0); let tomorrowBudget = baseDailyBudget - (gastosPorDia[tomorrowStr] || 0);
+
+      document.getElementById('display-hb').innerText = formatMoney(state.hb); document.getElementById('display-bs').innerText = formatMoney(state.bs);
+      
+      let dToday = document.getElementById('display-today'); dToday.innerText = formatMoney(todayBudget);
+      dToday.className = todayBudget < 0 ? "text-4xl font-black text-red-400" : "text-4xl font-black t-primary";
+
+      let dTomorrow = document.getElementById('display-tomorrow'); dTomorrow.innerText = formatMoney(tomorrowBudget);
+      dTomorrow.className = tomorrowBudget < 0 ? "text-lg font-bold text-red-400 mt-1 block" : "text-lg font-bold text-slate-100 mt-1 block";
+
+      document.getElementById('display-days').innerText = `${dates.length} Días`;
+      document.getElementById('modal-days-subtitle').innerText = `${dates.length} Días restantes hasta el cobro`;
+      
+      renderHistory(); if(!document.getElementById('modal-calendario').classList.contains('hidden')) renderCalendarModal();
+    }
+
+    function submitUnico(e) {
+      e.preventDefault();
+      const amount = parseAmountInput(document.getElementById('u-monto').value); const isBolsa = document.getElementById('u-bolsa').checked;
+      const targetDate = document.getElementById('u-fecha').value; const concept = document.getElementById('u-concepto').value;
+      if(!isBolsa) { const { baseDailyBudget, gastosPorDia } = calculateBudgets(); const limit = baseDailyBudget - (gastosPorDia[targetDate] || 0);
+        if (amount > limit && !confirm(`¡Cuidado! Superás el presupuesto (${formatMoney(limit)}). ¿Guardar igual?`)) return;
+      }
+      if (isBolsa) { state.bs -= amount; state.hb -= amount; } else { state.hb -= amount; }
+      let datesArr = isBolsa ? [] : [targetDate]; let idUnico = new Date().toISOString();
+      let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Gasto Único", amount, concept, target: isBolsa ? "Bolsa" : "Diario", dates: datesArr, newHB: state.hb, newBS: state.bs };
+      state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Gasto Único", monto: amount, concepto: concept, target: isBolsa ? "Bolsa" : "Diario", fechas_afectadas: JSON.stringify(datesArr) });
+      syncBackend(newMovement); clearForm('tab-unico'); render();
+    }
+
+    function submitDivisible(e) {
+      e.preventDefault();
+      const amount = parseAmountInput(document.getElementById('d-monto').value); let dias = document.getElementById('d-dias').value;
+      let startDateStr = document.getElementById('d-fecha').value; const concept = document.getElementById('d-concepto').value;
+      let datesArray = getRemainingDates(); let startIdx = datesArray.indexOf(startDateStr); if(startIdx === -1) startIdx = 0; 
+      let affectedDates = []; dias = dias ? parseInt(dias) : (datesArray.length - startIdx);
+      let partesFecha = startDateStr.split('-'); let curDate = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+      for(let i=0; i<dias; i++) { affectedDates.push(toLocalISODate(curDate)); curDate.setDate(curDate.getDate() + 1); }
+      const { baseDailyBudget, gastosPorDia } = calculateBudgets();
+      let chunk = amount / dias; let limit = baseDailyBudget - (gastosPorDia[affectedDates[0]] || 0);
+      if (chunk > limit && !confirm(`La cuota diaria (${formatMoney(chunk)}) supera lo libre hoy (${formatMoney(limit)}). ¿Guardar?`)) return;
+      state.hb -= amount; let idUnico = new Date().toISOString();
+      let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: "Gasto Divisible", amount, concept, target: "Diario", dates: affectedDates, newHB: state.hb };
+      state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: "Gasto Divisible", monto: amount, concepto: concept, target: "Diario", fechas_afectadas: JSON.stringify(affectedDates) });
+      syncBackend(newMovement); clearForm('tab-divisible'); render();
+    }
+
+    function submitAjuste(e) {
+      e.preventDefault();
+      let amount = parseAmountInput(document.getElementById('a-monto').value); const tipo = document.getElementById('a-tipo').value; const concept = document.getElementById('a-concepto').value;
+      let fechasAfectadas = []; let targetName = "Ajuste Global";
+      if (tipo === "6") { fechasAfectadas = [toLocalISODate(new Date())]; amount = -amount; targetName = "Inyección de Presupuesto"; } 
+      else if (tipo === "7" || tipo === "8") {
+          let startDate = document.getElementById('a-fecha').value; let dias = parseInt(document.getElementById('a-dias').value) || 1;
+          let partesFecha = startDate.split('-'); let curDate = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+          for(let i=0; i<dias; i++) { fechasAfectadas.push(toLocalISODate(curDate)); curDate.setDate(curDate.getDate() + 1); }
+          amount = -amount; targetName = "Inyección de Presupuesto"; if (tipo === "8") { state.bs -= Math.abs(amount); }
+      } else {
+          switch(tipo) { case "1": state.hb += amount; break; case "2": state.hb += amount; state.bs += amount; break; case "3": state.hb -= amount; break; case "4": state.hb -= amount; state.bs -= amount; break; case "5": state.bs += amount; break; }
+      }
+      let idUnico = new Date().toISOString();
+      let newMovement = { action: "addMovement", id: idUnico, user: currentUser, type: `Ajuste T-${tipo}`, amount, concept, target: targetName, dates: fechasAfectadas, newHB: state.hb, newBS: state.bs };
+      state.movements.push({ fecha: idUnico, usuario: currentUser, tipo: `Ajuste T-${tipo}`, monto: amount, concepto: concept, target: targetName, fechas_afectadas: JSON.stringify(fechasAfectadas) });
+      syncBackend(newMovement); clearForm('tab-ajuste'); render();
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('bottom-movimientos'); container.innerHTML = "";
+      if(state.movements.length === 0) { container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No hay movimientos registrados.</p>`; return; }
+      let reversedMovs = [...state.movements].reverse();
+      reversedMovs.forEach(m => {
+        let isNegative = parseFloat(m.monto) < 0; let displayMonto = Math.abs(m.monto);
+        let isIngreso = m.tipo.includes("T-1") || m.tipo.includes("T-2") || isNegative;
+        let colorAmount = isIngreso ? 't-primary' : 'text-slate-100'; let sign = isIngreso ? '+' : '-';
+        let dateObj = m.fecha ? new Date(m.fecha) : new Date();
+        let userColor = (m.usuario === "Brian") ? "bg-blue-900/50 text-blue-300 border-blue-700" : "bg-fuchsia-900/50 text-fuchsia-300 border-fuchsia-700";
+        let html = `
+          <div class="glass p-3 rounded-lg border border-slate-700 flex justify-between items-center mb-2">
+            <div class="flex flex-col flex-1 overflow-hidden pr-2">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[9px] uppercase font-bold border px-1.5 py-0.5 rounded-sm ${userColor}">${m.usuario || "App"}</span>
+                <span class="text-[10px] text-slate-500">${dateObj.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'})} ${dateObj.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+              <span class="text-sm font-semibold text-slate-300 truncate">${m.concepto || "Sin detalle"}</span>
+              <span class="text-[10px] text-slate-400 italic">${m.tipo.replace("Ajuste ", "")}</span>
+            </div>
+            <div class="text-right flex flex-col items-end justify-center">
+              <span class="text-base font-black ${colorAmount} mb-2">${sign}${formatMoney(displayMonto)}</span>
+              <div class="flex gap-1">
+                <button onclick="openEditModal('${m.fecha}')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-400 px-2 py-1.5 rounded border border-slate-700 transition-colors">✏️</button>
+                <button onclick="deleteMovementDirectly('${m.fecha}')" class="text-[10px] bg-red-900/20 hover:bg-red-900/50 text-red-400 px-2 py-1.5 rounded border border-red-500/30 transition-colors">🗑️</button>
+              </div>
+            </div>
+          </div>`;
+        container.innerHTML += html;
+      });
+    }
+
+    function renderCalendarModal() {
+      const cal = document.getElementById('modal-calendario-body'); cal.innerHTML = "";
+      const { dates, baseDailyBudget, gastosPorDia } = calculateBudgets();
+      dates.forEach(date => {
+        let dailyBudget = baseDailyBudget - gastosPorDia[date]; let colorCls = dailyBudget < 0 ? "text-red-400 border-red-900" : "t-primary border-slate-800";
+        let html = `<div class="glass p-3 rounded-lg border border-slate-700/80 mb-2">
+             <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
+                <span class="font-bold text-slate-200 text-xs">${date}</span>
+                <span class="font-bold text-xs ${colorCls} bg-slate-900 px-2 py-1 rounded border">Disp: ${formatMoney(dailyBudget)}</span>
+             </div>
+             <div class="text-xs text-slate-400 space-y-1 pl-1">`;
+        let hasMovements = false;
+        state.movements.forEach(m => {
+           if(m.fechas_afectadas && m.fechas_afectadas.length > 2 && m.fechas_afectadas.includes(date) && m.target !== "Ajuste Global" && m.target !== "Bolsa") {
+             hasMovements = true; let arr = JSON.parse(m.fechas_afectadas);
+             let propMonto = parseFloat(m.monto) / arr.length; let isPositive = propMonto < 0; 
+             let sign = isPositive ? "+" : "-"; let color = isPositive ? "t-primary font-bold" : "text-slate-300";
+             html += `<p class="flex justify-between items-center text-[11px]">
+               <span class="truncate w-3/4">• <strong class="${color}">${m.concepto}</strong> ${arr.length > 1 && !isPositive ? '<span class="text-[9px] text-slate-500">(Cuota)</span>' : ''}</span>
+               <span class="${color}">${sign}${formatMoney(Math.abs(propMonto))}</span>
+             </p>`;
+           }
+        });
+        if(!hasMovements) html += `<p class="italic text-[11px] text-slate-500">Sin gastos computados.</p>`;
+        html += `</div></div>`; cal.innerHTML += html;
+      });
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
